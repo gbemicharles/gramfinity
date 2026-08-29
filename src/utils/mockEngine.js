@@ -489,7 +489,11 @@ class MockEngine {
       
       // 2. Fetch Jetton Balances from Tonapi.io
       try {
-        const tonapiRes = await fetch(`https://tonapi.io/v2/accounts/${this.realWalletAddress}/jettons`);
+        const tonapiRes = await fetch(`https://tonapi.io/v2/accounts/${this.realWalletAddress}/jettons`, {
+          headers: {
+            'Authorization': `Bearer AH65FSZB6ZIZB6IAAAAIUMSA2DWAEPRSXY456FBAL2AWTMGYEFQ7DTJXX6F5GDX27IRXLCI`
+          }
+        });
         if (tonapiRes.ok) {
           const tonapiData = await tonapiRes.json();
           if (tonapiData.balances) {
@@ -498,7 +502,25 @@ class MockEngine {
               const decimals = b.jetton.decimals || 9;
               const jettonBalance = parseFloat(b.balance) / Math.pow(10, decimals);
               mainnetBalances[symbol] = jettonBalance;
-              mainnetCostBasis[symbol] = b.price?.prices?.USD ? b.price.prices.USD / (this.tokens.TON?.price || 7.24) : 0; // estimate cost basis in TON
+              const jettonPrice = b.price?.prices?.USD || 0;
+              mainnetCostBasis[symbol] = jettonPrice ? jettonPrice / (this.tokens.TON?.price || 7.24) : 0; // estimate cost basis in TON
+              
+              // Register this jetton in this.tokens dynamically so the portfolio page shows its price and worth!
+              if (jettonPrice > 0) {
+                this.tokens[symbol] = {
+                  symbol,
+                  name: b.jetton.name || symbol,
+                  address: b.jetton.address,
+                  price: jettonPrice,
+                  decimals,
+                  change24h: b.price?.diff_24h?.USD || 0,
+                  volume24h: 0,
+                  liquidity: 0,
+                  supply: 0,
+                  holders: 0,
+                  launchpad: "TON Mainnet"
+                };
+              }
             });
           }
         }
@@ -515,6 +537,7 @@ class MockEngine {
       };
       
       this.notifyWallet();
+      this.notifyPrices();
     } catch (error) {
       console.error("Error fetching real wallet balance", error);
       this.triggerToast("Failed to fetch real wallet balances", "error");
@@ -525,16 +548,24 @@ class MockEngine {
     if (this.networkMode !== 'mainnet') return;
     
     try {
-      // 1. Fetch live TON price from GeckoTerminal simple price or standard pool (e.g. TON/USDT)
-      const tonRes = await fetch("https://api.geckoterminal.com/api/v2/networks/ton/pools/EQA-X_yo3daCh7cwsFKhbNzSAS_-26JM4cEfDsrCnzWYxKgc");
-      if (tonRes.ok) {
-        const tonData = await tonRes.json();
-        if (tonData.data?.attributes?.price_in_usd) {
-          const newTonPrice = parseFloat(tonData.data.attributes.price_in_usd);
-          if (newTonPrice > 0) {
-            this.tokens.TON.price = newTonPrice;
+      // 1. Fetch live TON price from TonAPI Rates
+      try {
+        const tonRes = await fetch("https://tonapi.io/v2/rates?tokens=ton&currencies=usd", {
+          headers: {
+            'Authorization': `Bearer AH65FSZB6ZIZB6IAAAAIUMSA2DWAEPRSXY456FBAL2AWTMGYEFQ7DTJXX6F5GDX27IRXLCI`
+          }
+        });
+        if (tonRes.ok) {
+          const tonData = await tonRes.json();
+          if (tonData.rates?.TON?.prices?.USD) {
+            const newTonPrice = parseFloat(tonData.rates.TON.prices.USD);
+            if (newTonPrice > 0) {
+              this.tokens.TON.price = newTonPrice;
+            }
           }
         }
+      } catch (e) {
+        console.error("Error fetching TON price from TonAPI rates", e);
       }
       
       // 2. Fetch trending pools on TON network
