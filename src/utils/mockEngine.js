@@ -597,112 +597,201 @@ class MockEngine {
         console.error("Error fetching TON price from TonAPI rates", e);
       }
       
-      // 2. Fetch trending pools on TON network
-      const trendingRes = await fetch("https://api.geckoterminal.com/api/v2/networks/ton/trending_pools?page=1");
-      if (trendingRes.ok) {
-        const trendingData = await trendingRes.json();
-        if (trendingData.data) {
-          const mainnetTokens = { TON: this.tokens.TON };
-          
-          trendingData.data.forEach(pool => {
-            const attributes = pool.attributes;
-            const name = attributes.name;
-            const parts = name.split(" / ");
-            if (parts.length < 2) return;
-            
-            let symbol = parts[0];
-            if (symbol === "TON") symbol = parts[1];
-            if (symbol === "TON" || symbol === "USDT" || symbol === "USDC") return;
-            
-            const price = parseFloat(attributes.price_in_usd);
-            const volume24h = parseFloat(attributes.volume_usd?.h24 || 0);
-            const liquidity = parseFloat(attributes.reserve_in_usd || 0);
-            const change24h = parseFloat(attributes.price_percent_change?.h24 || 0);
-            
-            mainnetTokens[symbol] = {
-              symbol,
-              name: symbol + " (Mainnet)",
-              address: pool.relationships?.base_token?.data?.id?.split("_")[1] || pool.id.split("_")[1] || "EQ_mainnet_" + symbol,
-              price,
-              change1h: parseFloat(attributes.price_percent_change?.h1 || 0),
-              change24h,
-              volume24h,
-              volume1h: volume24h / 24,
-              volume5m: volume24h / 288,
-              buySellRatio: 0.5 + (Math.random() - 0.5) * 0.1,
-              holdersGrowth: (Math.random() - 0.4) * 2,
-              initialLiquidity: liquidity * 0.8,
-              devWallet: "EQ_mainnet_dev_" + symbol,
-              launchTime: Date.now() - 30 * 24 * 3600 * 1000,
-              category: "DeFi",
-              logoBg: "linear-gradient(135deg, #1e293b, #0f172a)",
-              socialLinks: { telegram: "https://t.me/toncoin", x: "https://x.com", website: "https://ton.org" },
-              liquidity,
-              supply: liquidity / price,
-              holders: Math.round(liquidity / 10),
-              security: { rugScore: Math.floor(Math.random() * 15), rugRisk: "Low Risk", verified: true, renounced: true, lockedLiquidity: 90 },
-              decimals: 9,
-              launchpad: "STON.fi Pool"
-            };
-            
-            if (!this.charts[symbol]) {
-              this.charts[symbol] = generateInitialChartData(price, 120);
-            } else {
-              const chartData = this.charts[symbol];
-              if (chartData.length > 0) {
-                chartData[chartData.length - 1].close = price;
+      const mainnetTokens = { TON: this.tokens.TON };
+      
+      // Map GeckoTerminal DEX id to Gramfinity launchpad label
+      const DEX_LAUNCHPAD_MAP = {
+        'uranus':       'TopBlast.lol',
+        'stonks-pump':  'sTONks',
+        'stonfi':       'STON.fi Launch',
+        'stonfi-v2':    'STON.fi Launch',
+        'dedust':       'DeDust Launch',
+        'dedust-v2':    'DeDust Launch',
+        'swap-coffee':  'Swap Coffee',
+        'tonco':        'Tonco',
+      };
+      
+      // Helper to extract token entry from a pool object
+      const extractPoolToken = (pool) => {
+        const attributes = pool.attributes;
+        const name = attributes.name || '';
+        const parts = name.split(' / ');
+        if (parts.length < 2) return null;
+        
+        let symbol = parts[0].trim();
+        if (symbol === 'TON') symbol = parts[1].trim();
+        if (!symbol || symbol === 'TON' || symbol === 'USDT' || symbol === 'USDC' || symbol === '[invalid]') return null;
+        
+        const dexId = pool.relationships?.dex?.data?.id || '';
+        const price = parseFloat(attributes.base_token_price_usd || attributes.price_in_usd || 0);
+        if (!price || price <= 0) return null;
+        
+        const volume24h = parseFloat(attributes.volume_usd?.h24 || 0);
+        const liquidity = parseFloat(attributes.reserve_in_usd || 0);
+        const change24h = parseFloat(attributes.price_percent_change?.h24 || 0);
+        const launchpad = DEX_LAUNCHPAD_MAP[dexId] || 'TON Mainnet';
+        const createdAt = attributes.pool_created_at ? new Date(attributes.pool_created_at).getTime() : Date.now();
+        
+        let address = pool.relationships?.base_token?.data?.id?.split('_').slice(1).join('_') || '';
+        if (!address) address = 'EQ_mainnet_' + symbol;
+        
+        return {
+          symbol,
+          name: attributes.base_token_name || symbol,
+          address,
+          price,
+          change1h: parseFloat(attributes.price_percent_change?.h1 || 0),
+          change24h,
+          volume24h,
+          volume1h: volume24h / 24,
+          volume5m: volume24h / 288,
+          buySellRatio: 0.55,
+          holdersGrowth: 0,
+          initialLiquidity: liquidity * 0.8,
+          devWallet: 'EQ_mainnet_dev_' + symbol,
+          launchTime: createdAt,
+          category: 'DeFi',
+          logoBg: 'linear-gradient(135deg, #1e293b, #0f172a)',
+          socialLinks: { telegram: 'https://t.me/toncoin', x: 'https://x.com', website: 'https://ton.org' },
+          liquidity,
+          supply: price > 0 ? liquidity / price : 0,
+          holders: Math.round(liquidity / 10),
+          security: { rugScore: Math.floor(Math.random() * 15), rugRisk: 'Low Risk', verified: true, renounced: true, lockedLiquidity: 90 },
+          decimals: 9,
+          launchpad
+        };
+      };
+      
+      // 2. Fetch new pools (last 24h launches across ALL DEXes on TON)
+      try {
+        const newPoolsRes = await fetch("https://api.geckoterminal.com/api/v2/networks/ton/new_pools?page=1");
+        if (newPoolsRes.ok) {
+          const newPoolsData = await newPoolsRes.json();
+          newPoolsData.data?.forEach(pool => {
+            const token = extractPoolToken(pool);
+            if (token && !mainnetTokens[token.symbol]) {
+              mainnetTokens[token.symbol] = token;
+              if (!this.charts[token.symbol]) {
+                this.charts[token.symbol] = generateInitialChartData(token.price, 60);
               }
             }
           });
-          
-          // In live mainnet mode, we do not inject simulated mock launches.
-          // Only actual live listings from GeckoTerminal and indexer API will be loaded.
-
-          // Fetch dynamic live launches from backend indexer API if running
-          try {
-            const apiBase = window.location.port === '3000' ? 'http://localhost:4000' : '';
-            const backendRes = await fetch(`${apiBase}/api/tokens`);
-            if (backendRes.ok) {
-              const backendTokens = await backendRes.json();
-              backendTokens.forEach(token => {
-                const price = token.price || 0.0092;
-                mainnetTokens[token.symbol] = {
-                  symbol: token.symbol,
-                  name: token.name,
-                  address: token.address,
-                  price: price,
-                  change1h: 0,
-                  change24h: 0,
-                  volume24h: 12000,
-                  volume1h: 500,
-                  volume5m: 40,
-                  buySellRatio: 0.5,
-                  holdersGrowth: 0,
-                  initialLiquidity: 5000,
-                  devWallet: "EQ_indexer_dev",
-                  launchTime: new Date(token.created_at).getTime(),
-                  category: "DeFi",
-                  logoBg: "linear-gradient(135deg, #0f172a, #1e293b)",
-                  socialLinks: { telegram: "https://t.me/toncoin", x: "https://x.com" },
-                  liquidity: 8000,
-                  supply: 10000000,
-                  holders: 120,
-                  security: { rugScore: 12, rugRisk: "Low Risk", verified: true, renounced: true, lockedLiquidity: 80 },
-                  decimals: 9,
-                  launchpad: token.launchpad,
-                  isDex: false,
-                  bondingProgress: token.bonding_progress
-                };
-              });
-            }
-          } catch (err) {
-            // Silence API fetch errors
-          }
-
-          this.tokens = mainnetTokens;
-          this.notifyPrices();
         }
+      } catch (e) {
+        console.error("Error fetching new TON pools", e);
       }
+      
+      // 3. Fetch TopBlast.lol (Uranus DEX) pools specifically
+      try {
+        const tbRes = await fetch("https://api.geckoterminal.com/api/v2/networks/ton/dexes/uranus/pools?page=1");
+        if (tbRes.ok) {
+          const tbData = await tbRes.json();
+          tbData.data?.forEach(pool => {
+            const token = extractPoolToken(pool);
+            if (token) {
+              // Always label as TopBlast, prefer higher volume entry
+              if (!mainnetTokens[token.symbol] || token.volume24h > (mainnetTokens[token.symbol].volume24h || 0)) {
+                mainnetTokens[token.symbol] = { ...token, launchpad: 'TopBlast.lol' };
+                if (!this.charts[token.symbol]) {
+                  this.charts[token.symbol] = generateInitialChartData(token.price, 80);
+                } else {
+                  const cd = this.charts[token.symbol];
+                  if (cd.length > 0) cd[cd.length - 1].close = token.price;
+                }
+              }
+            }
+          });
+        }
+      } catch (e) {
+        console.error("Error fetching TopBlast (Uranus) pools", e);
+      }
+      
+      // 4. Fetch sTONks pools
+      try {
+        const stonksRes = await fetch("https://api.geckoterminal.com/api/v2/networks/ton/dexes/stonks-pump/pools?page=1");
+        if (stonksRes.ok) {
+          const stonksData = await stonksRes.json();
+          stonksData.data?.forEach(pool => {
+            const token = extractPoolToken(pool);
+            if (token) {
+              if (!mainnetTokens[token.symbol] || token.volume24h > (mainnetTokens[token.symbol].volume24h || 0)) {
+                mainnetTokens[token.symbol] = { ...token, launchpad: 'sTONks' };
+                if (!this.charts[token.symbol]) {
+                  this.charts[token.symbol] = generateInitialChartData(token.price, 80);
+                }
+              }
+            }
+          });
+        }
+      } catch (e) {
+        console.error("Error fetching sTONks pools", e);
+      }
+      
+      // 5. Fetch trending pools on TON network (fills in established tokens)
+      try {
+        const trendingRes = await fetch("https://api.geckoterminal.com/api/v2/networks/ton/trending_pools?page=1");
+        if (trendingRes.ok) {
+          const trendingData = await trendingRes.json();
+          trendingData.data?.forEach(pool => {
+            const token = extractPoolToken(pool);
+            if (token && !mainnetTokens[token.symbol]) {
+              mainnetTokens[token.symbol] = token;
+              if (!this.charts[token.symbol]) {
+                this.charts[token.symbol] = generateInitialChartData(token.price, 120);
+              } else {
+                const cd = this.charts[token.symbol];
+                if (cd.length > 0) cd[cd.length - 1].close = token.price;
+              }
+            }
+          });
+        }
+      } catch (e) {
+        console.error("Error fetching trending TON pools", e);
+      }
+
+      // 6. Fetch dynamic live launches from backend indexer API if running
+      try {
+        const apiBase = window.location.port === '3000' ? 'http://localhost:4000' : '';
+        const backendRes = await fetch(`${apiBase}/api/tokens`);
+        if (backendRes.ok) {
+          const backendTokens = await backendRes.json();
+          backendTokens.forEach(token => {
+            const price = token.price || 0.0092;
+            mainnetTokens[token.symbol] = {
+              symbol: token.symbol,
+              name: token.name,
+              address: token.address,
+              price: price,
+              change1h: 0,
+              change24h: 0,
+              volume24h: 12000,
+              volume1h: 500,
+              volume5m: 40,
+              buySellRatio: 0.5,
+              holdersGrowth: 0,
+              initialLiquidity: 5000,
+              devWallet: "EQ_indexer_dev",
+              launchTime: new Date(token.created_at).getTime(),
+              category: "DeFi",
+              logoBg: "linear-gradient(135deg, #0f172a, #1e293b)",
+              socialLinks: { telegram: "https://t.me/toncoin", x: "https://x.com" },
+              liquidity: 8000,
+              supply: 10000000,
+              holders: 120,
+              security: { rugScore: 12, rugRisk: "Low Risk", verified: true, renounced: true, lockedLiquidity: 80 },
+              decimals: 9,
+              launchpad: token.launchpad,
+              isDex: false,
+              bondingProgress: token.bonding_progress
+            };
+          });
+        }
+      } catch (err) {
+        // Silence API fetch errors
+      }
+
+      this.tokens = mainnetTokens;
+      this.notifyPrices();
     } catch (e) {
       console.error("Error loading Mainnet prices", e);
     }
