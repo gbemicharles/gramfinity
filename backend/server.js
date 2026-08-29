@@ -30,6 +30,60 @@ if (process.env.DATABASE_URL) {
   pgPool = new Pool({
     connectionString: process.env.DATABASE_URL
   });
+
+  // Automatically initialize database schema tables
+  const initDb = async () => {
+    try {
+      // Create tokens table
+      await pgPool.query(`
+        CREATE TABLE IF NOT EXISTS tokens (
+          id SERIAL PRIMARY KEY,
+          symbol VARCHAR(50) NOT NULL,
+          name VARCHAR(100) NOT NULL,
+          address VARCHAR(100) UNIQUE NOT NULL,
+          launchpad VARCHAR(100) NOT NULL,
+          bonding_progress INT DEFAULT 0,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+      
+      // Create whales table with CamelCase fields matching frontend
+      await pgPool.query(`
+        CREATE TABLE IF NOT EXISTS whales (
+          id SERIAL PRIMARY KEY,
+          address VARCHAR(100) UNIQUE NOT NULL,
+          name VARCHAR(100) NOT NULL,
+          "winRate" NUMERIC(5, 2) DEFAULT 0,
+          "roi30d" NUMERIC(10, 2) DEFAULT 0,
+          "pnl30d" NUMERIC(15, 2) DEFAULT 0,
+          "trades30d" INT DEFAULT 0,
+          tag VARCHAR(100) DEFAULT '',
+          "avgEntryTime" VARCHAR(50) DEFAULT ''
+        );
+      `);
+      
+      console.log("🟢 PostgreSQL database schema initialized successfully.");
+      
+      // Seed initial whales if empty
+      const whaleCountRes = await pgPool.query('SELECT COUNT(*) FROM whales');
+      if (parseInt(whaleCountRes.rows[0].count, 10) === 0) {
+        console.log("🌱 Seeding initial smart money whale profiles into Postgres...");
+        const seedWhalesQuery = `
+          INSERT INTO whales (address, name, "winRate", "roi30d", "pnl30d", "trades30d", tag, "avgEntryTime")
+          VALUES 
+            ('EQC5a7d3_dogs_community_top_whale', 'TON Whale Alpha', 88.5, 245.2, 142500, 142, 'Early Sniper', '11 mins'),
+            ('EQD4v9b2_gramfinity_insider_whale', 'Smart Money Jetton', 74.2, 118.4, 68200, 89, 'High Yield Maker', '17 mins'),
+            ('EQB8v9c2_gram_pow_jetton_whale', 'Meme Degen 99', 59.8, 582.1, 215600, 412, 'Degen Master', '6 mins'),
+            ('EQC2a4b2_notcoin_early_whale', 'Venture Insider', 67.5, 42.8, 38100, 54, 'Position Holder', '34 mins')
+          ON CONFLICT DO NOTHING;
+        `;
+        await pgPool.query(seedWhalesQuery);
+      }
+    } catch (err) {
+      console.error("❌ Failed to initialize database schema:", err.message);
+    }
+  };
+  initDb();
 }
 
 // Middleware
@@ -64,7 +118,7 @@ app.get('/api/tokens', async (req, res) => {
 app.get('/api/whales', async (req, res) => {
   try {
     if (pgPool) {
-      const result = await pgPool.query('SELECT * FROM whales ORDER BY roi_30d DESC');
+      const result = await pgPool.query('SELECT * FROM whales ORDER BY "roi30d" DESC');
       res.json(result.rows);
     } else {
       if (!fs.existsSync(dbFallbackPath)) {
