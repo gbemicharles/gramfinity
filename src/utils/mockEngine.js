@@ -595,44 +595,8 @@ class MockEngine {
             }
           });
           
-          // Generate simulated new launches to ensure the Just Launched tab is never empty for testing
-          const simulatedNewLaunches = [
-            { symbol: "PEPE", name: "Pepe TON", launchpad: "Gaspump", price: 0.00012, bondingProgress: 68 },
-            { symbol: "WOJAK", name: "Wojak Jetton", launchpad: "Blum Launch", price: 0.00045, bondingProgress: 42 },
-            { symbol: "BOLT", name: "Bolt Speed Coin", launchpad: "Uranus", price: 0.00340, bondingProgress: 15 }
-          ];
-
-          simulatedNewLaunches.forEach(sim => {
-            if (!mainnetTokens[sim.symbol]) {
-              mainnetTokens[sim.symbol] = {
-                symbol: sim.symbol,
-                name: sim.name,
-                address: "EQ_sim_" + sim.symbol,
-                price: sim.price,
-                change1h: 4.5,
-                change24h: 12.8,
-                volume24h: 8400,
-                volume1h: 350,
-                volume5m: 30,
-                buySellRatio: 0.55,
-                holdersGrowth: 1.2,
-                initialLiquidity: 4500,
-                devWallet: "EQ_sim_dev_" + sim.symbol,
-                launchTime: Date.now() - 15 * 60 * 1000,
-                category: "Meme",
-                logoBg: "linear-gradient(135deg, #3b0764, #120024)",
-                socialLinks: { telegram: "https://t.me/toncoin", x: "https://x.com" },
-                liquidity: 9200,
-                supply: 9200 / sim.price,
-                holders: 145,
-                security: { rugScore: 8, rugRisk: "Low Risk", verified: true, renounced: true, lockedLiquidity: 85 },
-                decimals: 9,
-                launchpad: sim.launchpad,
-                isDex: false,
-                bondingProgress: sim.bondingProgress
-              };
-            }
-          });
+          // In live mainnet mode, we do not inject simulated mock launches.
+          // Only actual live listings from GeckoTerminal and indexer API will be loaded.
 
           // Fetch dynamic live launches from backend indexer API if running
           try {

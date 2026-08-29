@@ -32,19 +32,24 @@ const client = new TonClient({
 
 // Launchpad factory registry
 const LAUNCHPAD_FACTORIES = {
-  gaspump: "EQD_Gaspump_Factory_Address_Placeholder",
-  blum: "EQB_Blum_Factory_Address_Placeholder",
-  pocketfi: "EQC_PocketFi_Factory_Address_Placeholder",
-  topblast: "EQD_TopBlast_Factory_Address_Placeholder",
-  uranus: "EQE_Uranus_Factory_Address_Placeholder"
+  gaspump: process.env.GASPUMP_FACTORY || "EQD_Gaspump_Factory_Address_Placeholder",
+  blum: process.env.BLUM_FACTORY || "EQB_Blum_Factory_Address_Placeholder",
+  pocketfi: process.env.POCKETFI_FACTORY || "EQC_PocketFi_Factory_Address_Placeholder",
+  topblast: process.env.TOPBLAST_FACTORY || "EQAmkd4Pd_xgUW4b9MLrygf0SOfR2EUVa_iCtVWGnYB2hItG",
+  uranus: process.env.URANUS_FACTORY || "EQE_Uranus_Factory_Address_Placeholder"
 };
 
 // Check if an address string is a valid TON address
 const isValidAddress = (addr) => {
   try {
     Address.parse(addr);
-    return !addr.includes('_Placeholder');
+    const isPlaceholder = addr.includes('_Placeholder');
+    if (isPlaceholder) {
+      console.log(`ℹ️ Skipping placeholder address: ${addr}`);
+    }
+    return !isPlaceholder;
   } catch (e) {
+    console.error(`❌ Address.parse failed for value "${addr}":`, e.message);
     return false;
   }
 };
@@ -52,6 +57,10 @@ const isValidAddress = (addr) => {
 // Start indexer pipeline
 function startIndexer() {
   console.log("⚡ Starting Gramfinity Multi-Launchpad Indexer...");
+  console.log("Loaded factory config:");
+  Object.entries(LAUNCHPAD_FACTORIES).forEach(([key, val]) => {
+    console.log(`  - ${key}: "${val}"`);
+  });
   
   const validFactories = Object.entries(LAUNCHPAD_FACTORIES)
     .filter(([key, addr]) => isValidAddress(addr));
