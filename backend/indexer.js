@@ -244,7 +244,7 @@ function broadcastTokenDeployment(token) {
 
   const req = http.request({
     hostname: 'localhost',
-    port: 4000,
+    port: process.env.PORT || 4000,
     path: '/api/webhook/broadcast',
     method: 'POST',
     headers: {
