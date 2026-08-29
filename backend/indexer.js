@@ -73,7 +73,7 @@ function startIndexer() {
   }
 
   const factoryAddresses = validFactories.map(([key, addr]) => addr).join(',');
-  const sseUrl = `https://tonapi.io/v2/sse/accounts/events?accounts=${factoryAddresses}`;
+  const sseUrl = `https://tonapi.io/v2/sse/accounts/transactions?accounts=${factoryAddresses}`;
   const headers = {
     'Authorization': `Bearer ${process.env.TONAPI_KEY || ''}`
   };
@@ -100,33 +100,36 @@ function startIndexer() {
 }
 
 // Process transaction event triggers
-async function processTransactionEvent(event) {
-  if (!event || !event.actions) return;
+async function processTransactionEvent(tx) {
+  if (!tx || !tx.success) return;
 
-  for (const action of event.actions) {
-    if (action.type !== 'SmartContractExec') continue;
-    
-    const exec = action.smart_contract_exec;
-    if (!exec) continue;
+  // Find which launchpad factory this transaction occurred on
+  const matchedLaunchpad = Object.keys(LAUNCHPAD_FACTORIES).find(
+    key => {
+      const addr = LAUNCHPAD_FACTORIES[key];
+      return isValidAddress(addr) && Address.parse(addr).equals(Address.parse(tx.account.address));
+    }
+  );
 
-    const matchedLaunchpad = Object.keys(LAUNCHPAD_FACTORIES).find(
-      key => {
-        const addr = LAUNCHPAD_FACTORIES[key];
-        return isValidAddress(addr) && Address.parse(addr).equals(Address.parse(exec.contract.address));
+  if (!matchedLaunchpad) return;
+
+  console.log(`🎯 Detected transaction on launchpad: [${matchedLaunchpad}]`);
+
+  // Scan out_msgs to identify the child pool contract deployed by the factory
+  if (tx.out_msgs && tx.out_msgs.length > 0) {
+    for (const outMsg of tx.out_msgs) {
+      if (outMsg.destination) {
+        const tokenAddress = Address.parse(outMsg.destination.address).toString();
+        console.log(`🚀 New Launch detected on ${matchedLaunchpad}! Deployed Contract: ${tokenAddress}`);
+        await parseAndInsertNewLaunch(matchedLaunchpad, tokenAddress, tx.utime);
       }
-    );
-
-    if (matchedLaunchpad) {
-      console.log(`🎯 Detected deployment trigger on launchpad: [${matchedLaunchpad}]`);
-      await parseAndInsertNewLaunch(matchedLaunchpad, exec, event.timestamp);
     }
   }
 }
 
 // Parse smart contract execution message and insert to DB (Postgres or local file fallback)
-async function parseAndInsertNewLaunch(launchpad, exec, timestamp) {
+async function parseAndInsertNewLaunch(launchpad, tokenAddress, timestamp) {
   try {
-    const tokenAddress = exec.deployed_contract || Address.parse("EQ_Deployed_Jetton_Master_Address_Placeholder").toString();
     const tokenSymbol = "LAUNCHED"; 
     const tokenName = "Launched Token";
     
