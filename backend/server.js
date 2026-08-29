@@ -101,6 +101,23 @@ app.post('/api/webhook/broadcast', (req, res) => {
   res.json({ success: true });
 });
 
+// Spawn block indexer child process by default
+if (process.env.DISABLE_INDEXER !== 'true') {
+  const { fork } = require('child_process');
+  console.log('🤖 Spawning block indexer child process...');
+  const spawnIndexer = () => {
+    const indexerProcess = fork(path.join(__dirname, 'indexer.js'));
+    indexerProcess.on('error', (err) => {
+      console.error('❌ Indexer child process error:', err.message);
+    });
+    indexerProcess.on('exit', (code) => {
+      console.warn(`⚠️ Indexer child process exited with code ${code}. Re-spawning in 5 seconds...`);
+      setTimeout(spawnIndexer, 5000);
+    });
+  };
+  spawnIndexer();
+}
+
 // Start listening
 server.listen(PORT, () => {
   console.log(`🚀 Gramfinity server running in ${pgPool ? 'Production Postgres' : 'Local JSON Fallback'} mode on port ${PORT}`);
