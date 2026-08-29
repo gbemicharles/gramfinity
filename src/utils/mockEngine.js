@@ -480,13 +480,22 @@ class MockEngine {
     this.isFetchingWalletBalances = true;
     
     try {
-      // 1. Fetch TON Balance
-      const toncenterRes = await fetch(`https://toncenter.com/api/v2/getAddressInformation?address=${this.realWalletAddress}`);
-      const toncenterData = await toncenterRes.json();
+      // 1. Fetch TON Balance from TonAPI (more reliable than toncenter, we have auth key)
       let tonBalance = 0;
-      if (toncenterData.ok && toncenterData.result) {
-        const rawBalance = toncenterData.result.balance;
-        tonBalance = parseFloat(rawBalance) / 1000000000;
+      try {
+        const accountRes = await fetch(`https://tonapi.io/v2/accounts/${this.realWalletAddress}`, {
+          headers: {
+            'Authorization': `Bearer AH65FSZB6ZIZB6IAAAAIUMSA2DWAEPRSXY456FBAL2AWTMGYEFQ7DTJXX6F5GDX27IRXLCI`
+          }
+        });
+        if (accountRes.ok) {
+          const accountData = await accountRes.json();
+          if (accountData.balance) {
+            tonBalance = parseFloat(accountData.balance) / 1000000000;
+          }
+        }
+      } catch (e) {
+        console.error("Error fetching TON balance from TonAPI", e);
       }
       
       // Initialize mainnet balances

@@ -105,6 +105,7 @@ export default function Portfolio({ onSelectTokenForTrade }) {
   const [tokens, setTokens] = useState({});
   const [activeShareAsset, setActiveShareAsset] = useState(null);
   const [shareImageUri, setShareImageUri] = useState('');
+  const [networkMode, setNetworkMode] = useState(localStorage.getItem('gramfinity_network_mode') || 'sandbox');
 
   useEffect(() => {
     const unsubWallet = mockEngine.subscribeWallet(w => {
@@ -114,11 +115,24 @@ export default function Portfolio({ onSelectTokenForTrade }) {
       setTokens(p);
     });
 
+    // Track network mode changes
+    const onStorage = () => setNetworkMode(localStorage.getItem('gramfinity_network_mode') || 'sandbox');
+    window.addEventListener('storage', onStorage);
+
     return () => {
       unsubWallet();
       unsubPrices();
+      window.removeEventListener('storage', onStorage);
     };
   }, []);
+
+  // Derive mainnet/wallet state reactively from subscriptions.
+  // wallet.address from mockEngine is the sandbox mock address when no real wallet is connected.
+  // When a real wallet is connected, fetchRealWalletBalances replaces it with the real address.
+  const isMainnet = mockEngine.networkMode === 'mainnet';
+  // The sandbox mock wallet address always contains 'gramfinity' - real addresses are never that
+  const hasSandboxAddress = !wallet || wallet.address?.includes('gramfinity') || wallet.address?.includes('EQD3a9b2');
+  const isRealWalletConnected = isMainnet && !hasSandboxAddress;
 
   const handleShareCard = (asset) => {
     const canvas = document.createElement('canvas');
@@ -303,6 +317,32 @@ export default function Portfolio({ onSelectTokenForTrade }) {
       unrealizedPnL
     };
   }, [wallet, tokens]);
+
+  // In mainnet mode without a connected wallet, show a connect-wallet prompt
+  if (isMainnet && !isRealWalletConnected) {
+    return (
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '100%',
+        gap: '16px',
+        color: 'var(--text-muted)',
+        padding: '40px'
+      }}>
+        <div style={{ fontSize: '3rem' }}>💳</div>
+        <h2 style={{ color: '#ffffff', fontSize: '1.2rem', margin: 0 }}>Connect Your TON Wallet</h2>
+        <p style={{ textAlign: 'center', fontSize: '0.85rem', maxWidth: '360px', lineHeight: 1.6 }}>
+          You are in <strong style={{ color: 'var(--accent-green)' }}>Live Mainnet</strong> mode.
+          Connect your TON wallet using the button in the top-right to view your real GRAM balance, jetton holdings, and live USD net worth.
+        </p>
+        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
+          Supports: Tonkeeper · MyTonWallet · TonSpace · OpenMask
+        </div>
+      </div>
+    );
+  }
 
   if (!wallet || Object.keys(tokens).length === 0) {
     return (
