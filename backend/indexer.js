@@ -73,7 +73,7 @@ function startIndexer() {
   }
 
   const factoryAddresses = validFactories.map(([key, addr]) => addr).join(',');
-  const sseUrl = `https://tonapi.io/v2/accounts/events?accounts=${factoryAddresses}`;
+  const sseUrl = `https://tonapi.io/v2/sse/accounts/events?accounts=${factoryAddresses}`;
   const headers = {
     'Authorization': `Bearer ${process.env.TONAPI_KEY || ''}`
   };
