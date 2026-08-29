@@ -439,6 +439,10 @@ class MockEngine {
     this.realWalletAddress = null;
     this.sandboxWalletBackup = JSON.parse(JSON.stringify(this.wallet));
 
+    // Fetch-in-progress locks to prevent race conditions in mainnet mode
+    this.isFetchingMainnetPrices = false;
+    this.isFetchingWalletBalances = false;
+
     // Load settings from Telegram cloud storage if available
     this.loadSettingsFromCloud();
 
@@ -472,6 +476,8 @@ class MockEngine {
 
   async fetchRealWalletBalances() {
     if (this.networkMode !== 'mainnet' || !this.realWalletAddress) return;
+    if (this.isFetchingWalletBalances) return; // Prevent overlapping fetches
+    this.isFetchingWalletBalances = true;
     
     try {
       // 1. Fetch TON Balance
@@ -570,11 +576,15 @@ class MockEngine {
     } catch (error) {
       console.error("Error fetching real wallet balance", error);
       this.triggerToast("Failed to fetch real wallet balances", "error");
+    } finally {
+      this.isFetchingWalletBalances = false;
     }
   }
 
   async fetchMainnetPrices() {
     if (this.networkMode !== 'mainnet') return;
+    if (this.isFetchingMainnetPrices) return; // Prevent overlapping fetches
+    this.isFetchingMainnetPrices = true;
     
     try {
       // 1. Fetch live TON price from TonAPI Rates
@@ -790,10 +800,13 @@ class MockEngine {
         // Silence API fetch errors
       }
 
-      this.tokens = mainnetTokens;
+      // Merge into existing tokens in-place (never wipe the list between fetches)
+      Object.assign(this.tokens, mainnetTokens);
       this.notifyPrices();
     } catch (e) {
       console.error("Error loading Mainnet prices", e);
+    } finally {
+      this.isFetchingMainnetPrices = false;
     }
   }
 
@@ -1288,11 +1301,10 @@ class MockEngine {
 
   // Simulation runner
   startSimulation() {
-    // Live price movements
+    // Live price movements — sandbox updates every 3.5s, mainnet refreshes every 60s
     setInterval(() => {
       if (this.networkMode === 'mainnet') {
-        this.fetchMainnetPrices();
-        this.fetchRealWalletBalances();
+        // Mainnet: do NOT run the mock sandbox price simulation loop
         return;
       }
 
@@ -1364,11 +1376,23 @@ class MockEngine {
       }
     }, 3500);
 
-    // Periodically launch new tokens every 24 seconds!
+    // Periodically launch new tokens every 24 seconds (sandbox only)!
     setInterval(() => {
       if (this.networkMode === 'mainnet') return;
       this.simulateNewTokenLaunch();
     }, 24000);
+
+    // Mainnet: refresh prices every 60 seconds to stay current without hammering APIs
+    setInterval(() => {
+      if (this.networkMode !== 'mainnet') return;
+      this.fetchMainnetPrices();
+    }, 60000);
+
+    // Mainnet: refresh wallet balances every 90 seconds
+    setInterval(() => {
+      if (this.networkMode !== 'mainnet') return;
+      this.fetchRealWalletBalances();
+    }, 90000);
   }
 
   checkAlertsForToken(symbol, oldPrice, newPrice) {
