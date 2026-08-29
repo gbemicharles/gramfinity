@@ -101,6 +101,17 @@ app.post('/api/webhook/broadcast', (req, res) => {
   res.json({ success: true });
 });
 
+// Serve static files from the React frontend app build directory
+app.use(express.static(path.join(__dirname, '../dist')));
+
+// Catch-all route to serve index.html for frontend single-page routing
+app.get('*', (req, res, next) => {
+  if (req.path.startsWith('/api')) {
+    return next();
+  }
+  res.sendFile(path.join(__dirname, '../dist/index.html'));
+});
+
 // Spawn block indexer child process by default
 if (process.env.DISABLE_INDEXER !== 'true') {
   const { fork } = require('child_process');
