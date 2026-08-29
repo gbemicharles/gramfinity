@@ -502,25 +502,24 @@ class MockEngine {
               const decimals = b.jetton.decimals || 9;
               const jettonBalance = parseFloat(b.balance) / Math.pow(10, decimals);
               mainnetBalances[symbol] = jettonBalance;
-              const jettonPrice = b.price?.prices?.USD || 0;
+              // Fallback to a default price of $0.001 if TonAPI rates does not track this jetton yet
+              const jettonPrice = b.price?.prices?.USD || 0.001;
               mainnetCostBasis[symbol] = jettonPrice ? jettonPrice / (this.tokens.TON?.price || 7.24) : 0; // estimate cost basis in TON
               
               // Register this jetton in this.tokens dynamically so the portfolio page shows its price and worth!
-              if (jettonPrice > 0) {
-                this.tokens[symbol] = {
-                  symbol,
-                  name: b.jetton.name || symbol,
-                  address: b.jetton.address,
-                  price: jettonPrice,
-                  decimals,
-                  change24h: b.price?.diff_24h?.USD || 0,
-                  volume24h: 0,
-                  liquidity: 0,
-                  supply: 0,
-                  holders: 0,
-                  launchpad: "TON Mainnet"
-                };
-              }
+              this.tokens[symbol] = {
+                symbol,
+                name: b.jetton.name || symbol,
+                address: b.jetton.address,
+                price: jettonPrice,
+                decimals,
+                change24h: b.price?.diff_24h?.USD || 0,
+                volume24h: 0,
+                liquidity: 0,
+                supply: 0,
+                holders: 0,
+                launchpad: "TON Mainnet"
+              };
             });
           }
         }

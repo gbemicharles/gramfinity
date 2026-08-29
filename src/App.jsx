@@ -152,7 +152,7 @@ export default function App() {
               Gas Fee: <span style={{ color: '#00ff87' }}>Low (0.005 TON)</span>
             </span>
             <span>
-              TON Price: <span style={{ color: 'var(--accent-cyan)' }}>${tonPrice.toFixed(2)}</span>
+              GRAM Price: <span style={{ color: 'var(--accent-cyan)' }}>${tonPrice.toFixed(2)}</span>
             </span>
           </div>
 
