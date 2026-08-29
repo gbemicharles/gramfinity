@@ -512,7 +512,24 @@ class MockEngine {
         if (tonapiRes.ok) {
           const tonapiData = await tonapiRes.json();
           if (tonapiData.balances && tonapiData.balances.length > 0) {
-            // Extract all jetton contract addresses to query rates in bulk
+            // Also fetch Ston.fi assets list in parallel for backup jetton prices!
+            let stonfiPriceMap = {};
+            try {
+              const stonRes = await fetch('https://api.ston.fi/v1/assets');
+              if (stonRes.ok) {
+                const stonData = await stonRes.json();
+                stonData.asset_list?.forEach(a => {
+                  const p = parseFloat(a.dex_usd_price || a.third_party_usd_price || 0);
+                  if (p > 0 && a.contract_address) {
+                    stonfiPriceMap[a.contract_address.toLowerCase()] = p;
+                  }
+                });
+              }
+            } catch (stonErr) {
+              console.error("Error fetching Ston.fi asset prices", stonErr);
+            }
+
+            // Extract all jetton contract addresses to query rates in bulk from TonAPI
             const jettonAddresses = tonapiData.balances.map(b => b.jetton.address).join(',');
             let ratesMap = {};
             
@@ -540,30 +557,43 @@ class MockEngine {
             }
             
             tonapiData.balances.forEach(b => {
-              const symbol = b.jetton.symbol;
-              const decimals = b.jetton.decimals || 9;
+              const symbol = b.jetton.symbol || b.jetton.name || "JETTON";
+              const decimals = b.jetton.decimals !== undefined ? b.jetton.decimals : 9;
               const jettonBalance = parseFloat(b.balance) / Math.pow(10, decimals);
+              if (jettonBalance <= 0) return;
+
               mainnetBalances[symbol] = jettonBalance;
               
-              const cleanAddr = b.jetton.address.toLowerCase();
-              const rate = ratesMap[cleanAddr] || { price: b.price?.prices?.USD || 0, change24h: parseFloat(b.price?.diff_24h?.USD) || 0 };
-              const jettonPrice = rate.price;
+              const cleanAddr = (b.jetton.address || "").toLowerCase();
               
-              mainnetCostBasis[symbol] = jettonPrice ? jettonPrice / (this.tokens.TON?.price || 7.24) : 0; // estimate cost basis in TON
+              // 4-Tier Price Resolution System:
+              // 1. TonAPI Rates
+              // 2. TonAPI Jetton Balance embedded price
+              // 3. Ston.fi DEX Asset Price
+              // 4. Existing price in this.tokens (GeckoTerminal scanner)
+              const tonApiRate = ratesMap[cleanAddr]?.price || 0;
+              const tonApiEmbeddedPrice = parseFloat(b.price?.prices?.USD || 0);
+              const stonfiPrice = stonfiPriceMap[cleanAddr] || 0;
+              const existingPrice = this.tokens[symbol]?.price || 0;
+
+              const jettonPrice = tonApiRate || tonApiEmbeddedPrice || stonfiPrice || existingPrice || 0;
+              const change24h = ratesMap[cleanAddr]?.change24h || parseFloat(b.price?.diff_24h?.USD || 0) || this.tokens[symbol]?.change24h || 0;
               
-              // Register this jetton in this.tokens dynamically so the portfolio page shows its price and worth!
+              mainnetCostBasis[symbol] = jettonPrice ? jettonPrice / (this.tokens.TON?.price || 1.36) : 0;
+              
+              // Register this jetton in this.tokens dynamically so portfolio shows its price & worth!
               this.tokens[symbol] = {
                 symbol,
                 name: b.jetton.name || symbol,
                 address: b.jetton.address,
                 price: jettonPrice,
                 decimals,
-                change24h: rate.change24h,
-                volume24h: 0,
-                liquidity: 0,
-                supply: 0,
-                holders: 0,
-                launchpad: "TON Mainnet"
+                change24h,
+                volume24h: this.tokens[symbol]?.volume24h || 0,
+                liquidity: this.tokens[symbol]?.liquidity || 0,
+                supply: this.tokens[symbol]?.supply || 0,
+                holders: this.tokens[symbol]?.holders || 0,
+                launchpad: this.tokens[symbol]?.launchpad || "TON Mainnet"
               };
             });
           }

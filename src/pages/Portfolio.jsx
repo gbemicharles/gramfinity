@@ -477,8 +477,8 @@ export default function Portfolio({ onSelectTokenForTrade }) {
                   <tr key={asset.symbol}>
                     <td>
                       <div style={{ display: 'flex', flexDirection: 'column' }}>
-                        <span style={{ fontWeight: 600, color: '#ffffff' }}>{asset.symbol === 'TON' ? 'GRAM' : asset.symbol}</span>
-                        <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>{asset.symbol === 'TON' ? 'Gram' : asset.name}</span>
+                        <span style={{ fontWeight: 600, color: '#ffffff' }}>{asset.symbol}</span>
+                        <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>{asset.name}</span>
                         {!isTON && wallet.positionsSettings?.[asset.symbol] && (
                           <span style={{ fontSize: '0.6rem', color: 'var(--accent-cyan)', marginTop: '2px', display: 'flex', gap: '4px' }}>
                             {wallet.positionsSettings[asset.symbol].tpActive && `🛡️ TP: +${wallet.positionsSettings[asset.symbol].tp}%`}

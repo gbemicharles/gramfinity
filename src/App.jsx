@@ -378,7 +378,7 @@ export default function App() {
                 <Wallet size={14} className="text-green" /> Wallet Balance
               </div>
               <div style={{ fontSize: '1rem', fontWeight: 600, fontFamily: 'var(--font-mono)' }}>
-                {wallet ? wallet.balances.TON.toFixed(2) : '0.00'} GRAM
+                {wallet ? wallet.balances.TON.toFixed(2) : '0.00'} TON
               </div>
             </div>
           </aside>
