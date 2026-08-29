@@ -36,7 +36,8 @@ const LAUNCHPAD_FACTORIES = {
   blum: process.env.BLUM_FACTORY || "EQB_Blum_Factory_Address_Placeholder",
   pocketfi: process.env.POCKETFI_FACTORY || "EQC_PocketFi_Factory_Address_Placeholder",
   topblast: process.env.TOPBLAST_FACTORY || "EQAmkd4Pd_xgUW4b9MLrygf0SOfR2EUVa_iCtVWGnYB2hItG",
-  uranus: process.env.URANUS_FACTORY || "EQE_Uranus_Factory_Address_Placeholder"
+  uranus: process.env.URANUS_FACTORY || "EQE_Uranus_Factory_Address_Placeholder",
+  stonks: process.env.STONKS_FACTORY || "EQAmTDBEcOvTfakgld4aNsa8VWidZtGiN6wTJW5PWkBJa3Pp"
 };
 
 // Check if an address string is a valid TON address
@@ -152,7 +153,8 @@ async function parseAndInsertNewLaunch(launchpad, tokenAddress, timestamp) {
       launchpad: launchpad === 'gaspump' ? 'Gaspump' :
                  launchpad === 'blum' ? 'Blum Launch' :
                  launchpad === 'pocketfi' ? 'PocketFi' :
-                 launchpad === 'topblast' ? 'TopBlast.lol' : 'Uranus',
+                 launchpad === 'topblast' ? 'TopBlast.lol' :
+                 launchpad === 'stonks' ? 'sTONks' : 'Uranus',
       bonding_progress: initialBondPercent,
       created_at: new Date(timestamp * 1000).toISOString()
     };

@@ -13,7 +13,7 @@ export default function Discover({ onSelectTokenForTrade }) {
   const [selectedCategory, setSelectedCategory] = useState('ALL'); // ALL, Meme, DeFi, Gaming
   const [timeframeFilter, setTimeframeFilter] = useState('ALL'); // ALL, NEW_5M
   const [mcapFilter, setMcapFilter] = useState('ALL'); // ALL, UNDER_100K, OVER_100K
-  const [selectedLaunchpad, setSelectedLaunchpad] = useState('ALL'); // ALL, Gaspump, TonFun, TonRaffles, STON.fi, DeDust, Direct Mint
+  const [selectedLaunchpad, setSelectedLaunchpad] = useState('ALL'); // ALL, Gaspump, Blum Launch, PocketFi, TopBlast.lol, sTONks, Uranus, STON.fi Launch, DeDust Launch, Direct Mint
   const [sortBy, setSortBy] = useState('launchTime'); // launchTime, volume5m, volume1h, volume24h, holdersGrowth, liquidity, rugScore
   const [verifiedOnly, setVerifiedOnly] = useState(false);
   const [activeTab, setActiveTab] = useState('JUST_LAUNCHED'); // JUST_LAUNCHED, TRENDING, BONDED
@@ -557,8 +557,11 @@ export default function Discover({ onSelectTokenForTrade }) {
               >
                 <option value="ALL">All Sources</option>
                 <option value="Gaspump">Gaspump</option>
-                <option value="TonFun">TonFun</option>
-                <option value="TonRaffles">TonRaffles</option>
+                <option value="Blum Launch">Blum Launch</option>
+                <option value="PocketFi">PocketFi</option>
+                <option value="TopBlast.lol">TopBlast.lol</option>
+                <option value="sTONks">sTONks</option>
+                <option value="Uranus">Uranus</option>
                 <option value="STON.fi Launch">STON.fi Launch</option>
                 <option value="DeDust Launch">DeDust Launch</option>
                 <option value="Direct Mint">Direct Mint</option>
@@ -930,13 +933,19 @@ export default function Discover({ onSelectTokenForTrade }) {
                             borderRadius: '4px',
                             background: 
                               token.launchpad === 'Gaspump' ? 'rgba(245, 158, 11, 0.12)' :
-                              token.launchpad === 'TonFun' ? 'rgba(16, 185, 129, 0.12)' :
-                              token.launchpad === 'TonRaffles' ? 'rgba(139, 92, 246, 0.12)' :
+                              token.launchpad === 'Blum Launch' ? 'rgba(16, 185, 129, 0.12)' :
+                              token.launchpad === 'PocketFi' ? 'rgba(167, 139, 250, 0.12)' :
+                              token.launchpad === 'TopBlast.lol' ? 'rgba(234, 179, 8, 0.12)' :
+                              token.launchpad === 'sTONks' ? 'rgba(59, 130, 246, 0.12)' :
+                              token.launchpad === 'Uranus' ? 'rgba(236, 72, 153, 0.12)' :
                               token.launchpad?.includes('STON.fi') ? 'rgba(6, 182, 212, 0.12)' : 'rgba(236, 72, 153, 0.12)',
                             color: 
                               token.launchpad === 'Gaspump' ? '#f59e0b' :
-                              token.launchpad === 'TonFun' ? '#10b981' :
-                              token.launchpad === 'TonRaffles' ? '#a78bfa' :
+                              token.launchpad === 'Blum Launch' ? '#10b981' :
+                              token.launchpad === 'PocketFi' ? '#a78bfa' :
+                              token.launchpad === 'TopBlast.lol' ? '#eab308' :
+                              token.launchpad === 'sTONks' ? '#3b82f6' :
+                              token.launchpad === 'Uranus' ? '#ec4899' :
                               token.launchpad?.includes('STON.fi') ? '#22d3ee' : '#f472b6',
                             border: '1px solid currentColor'
                           }}
