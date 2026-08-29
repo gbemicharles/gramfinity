@@ -571,8 +571,10 @@ class MockEngine {
         history: [] // Clear sandbox history
       };
       
-      this.notifyWallet();
+      // Notify prices FIRST: jetton prices must be registered before wallet state
+      // triggers Portfolio useMemo recomputation (otherwise prices are 0)
       this.notifyPrices();
+      this.notifyWallet();
     } catch (error) {
       console.error("Error fetching real wallet balance", error);
       this.triggerToast("Failed to fetch real wallet balances", "error");
@@ -1047,10 +1049,13 @@ class MockEngine {
 
   // Internal trigger notifications
   notifyPrices() {
-    // Ensure all tokens are augmented with radar, sentiment, and clusters
-    Object.keys(this.tokens).forEach(symbol => {
-      this.tokens[symbol] = this.augmentTokenMetadata(symbol, this.tokens[symbol]);
-    });
+    // Only augment with sandbox metadata in sandbox mode — augmentation adds random values
+    // that cause visible flicker in mainnet mode on every notify call
+    if (this.networkMode !== 'mainnet') {
+      Object.keys(this.tokens).forEach(symbol => {
+        this.tokens[symbol] = this.augmentTokenMetadata(symbol, this.tokens[symbol]);
+      });
+    }
     this.priceListeners.forEach(cb => cb({ ...this.tokens }));
   }
 
