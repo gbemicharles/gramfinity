@@ -600,7 +600,8 @@ class MockEngine {
 
           // Fetch dynamic live launches from backend indexer API if running
           try {
-            const backendRes = await fetch("http://localhost:4000/api/tokens");
+            const apiBase = window.location.port === '3000' ? 'http://localhost:4000' : '';
+            const backendRes = await fetch(`${apiBase}/api/tokens`);
             if (backendRes.ok) {
               const backendTokens = await backendRes.json();
               backendTokens.forEach(token => {

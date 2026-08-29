@@ -32,28 +32,26 @@ const client = new TonClient({
 
 // Launchpad factory registry
 const LAUNCHPAD_FACTORIES = {
-  gaspump: process.env.GASPUMP_FACTORY || "EQD_Gaspump_Factory_Address_Placeholder",
-  blum: process.env.BLUM_FACTORY || "EQB_Blum_Factory_Address_Placeholder",
+  gaspump: process.env.GASPUMP_FACTORY || "EQBX1bp2j2y8tbw0KDaxFPADrBRWLbsPvSK0fF6jZKK_aEIs",
+  blum: process.env.BLUM_FACTORY || "EQBdyhUFxfqSHPvr38VOK9Wvo3ZE7Ih-MoAEhx2sEPqrb4Fv",
   pocketfi: process.env.POCKETFI_FACTORY || "EQC_PocketFi_Factory_Address_Placeholder",
   topblast: process.env.TOPBLAST_FACTORY || "EQAmkd4Pd_xgUW4b9MLrygf0SOfR2EUVa_iCtVWGnYB2hItG",
   uranus: process.env.URANUS_FACTORY || "EQE_Uranus_Factory_Address_Placeholder",
-  stonks: process.env.STONKS_FACTORY || "EQAmTDBEcOvTfakgld4aNsa8VWidZtGiN6wTJW5PWkBJa3Pp"
+  stonks: process.env.STONKS_FACTORY || "EQAmTDBEcOvTfakgld4aNsa8VWidZtGiN6wTJW5PWkBJa3Pp,EQCLvyQZCt9hoitq1xfbQNrGN43Wv2as4wHdJf5A9C-KY_2e"
 };
 
 // Check if an address string is a valid TON address
 const isValidAddress = (addr) => {
   try {
-    Address.parse(addr);
-    const isPlaceholder = addr.includes('_Placeholder');
-    if (isPlaceholder) {
-      console.log(`ℹ️ Skipping placeholder address: ${addr}`);
-    }
-    return !isPlaceholder;
+    Address.parse(addr.trim());
+    return !addr.includes('_Placeholder');
   } catch (e) {
-    console.error(`❌ Address.parse failed for value "${addr}":`, e.message);
     return false;
   }
 };
+
+// Flattened list of active factory mappings for routing
+const flattenedFactories = [];
 
 // Start indexer pipeline
 function startIndexer() {
@@ -62,21 +60,35 @@ function startIndexer() {
   Object.entries(LAUNCHPAD_FACTORIES).forEach(([key, val]) => {
     console.log(`  - ${key}: "${val}"`);
   });
-  
-  const validFactories = Object.entries(LAUNCHPAD_FACTORIES)
-    .filter(([key, addr]) => isValidAddress(addr));
 
-  if (validFactories.length === 0) {
+  // Empty and rebuild flattened mappings
+  flattenedFactories.length = 0;
+  
+  Object.entries(LAUNCHPAD_FACTORIES).forEach(([key, val]) => {
+    const addrs = val.split(',');
+    addrs.forEach(addr => {
+      const cleanAddr = addr.trim();
+      if (isValidAddress(cleanAddr)) {
+        flattenedFactories.push({ key, address: cleanAddr });
+      } else if (cleanAddr.includes('_Placeholder')) {
+        console.log(`ℹ️ Skipping placeholder address: ${cleanAddr}`);
+      } else {
+        console.error(`❌ Address.parse failed for value "${cleanAddr}"`);
+      }
+    });
+  });
+
+  if (flattenedFactories.length === 0) {
     console.log("⚠️ No valid live launchpad contract addresses configured in indexer.js.");
     console.log("🚀 Starting local simulated indexing loop (Zero-Cost Developer Staging mode)...");
     startSimulatedIndexerLoop();
     return;
   }
 
-  const factoryAddresses = validFactories.map(([key, addr]) => addr).join(',');
+  const factoryAddresses = flattenedFactories.map(f => f.address).join(',');
   const sseUrl = `https://tonapi.io/v2/sse/accounts/transactions?accounts=${factoryAddresses}`;
   const headers = {
-    'Authorization': `Bearer ${process.env.TONAPI_KEY || ''}`
+    'Authorization': `Bearer ${process.env.TONAPI_KEY || 'AH65FSZB6ZIZB6IAAAAIUMSA2DWAEPRSXY456FBAL2AWTMGYEFQ7DTJXX6F5GDX27IRXLCI'}`
   };
 
   const eventSource = new EventSource(sseUrl, { headers });
@@ -105,14 +117,12 @@ async function processTransactionEvent(tx) {
   if (!tx || !tx.success) return;
 
   // Find which launchpad factory this transaction occurred on
-  const matchedLaunchpad = Object.keys(LAUNCHPAD_FACTORIES).find(
-    key => {
-      const addr = LAUNCHPAD_FACTORIES[key];
-      return isValidAddress(addr) && Address.parse(addr).equals(Address.parse(tx.account.address));
-    }
+  const matched = flattenedFactories.find(
+    f => Address.parse(f.address).equals(Address.parse(tx.account.address))
   );
 
-  if (!matchedLaunchpad) return;
+  if (!matched) return;
+  const matchedLaunchpad = matched.key;
 
   console.log(`🎯 Detected transaction on launchpad: [${matchedLaunchpad}]`);
 
