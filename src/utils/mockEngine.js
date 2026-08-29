@@ -496,14 +496,44 @@ class MockEngine {
         });
         if (tonapiRes.ok) {
           const tonapiData = await tonapiRes.json();
-          if (tonapiData.balances) {
+          if (tonapiData.balances && tonapiData.balances.length > 0) {
+            // Extract all jetton contract addresses to query rates in bulk
+            const jettonAddresses = tonapiData.balances.map(b => b.jetton.address).join(',');
+            let ratesMap = {};
+            
+            if (jettonAddresses) {
+              try {
+                const ratesRes = await fetch(`https://tonapi.io/v2/rates?tokens=${jettonAddresses}&currencies=usd`, {
+                  headers: {
+                    'Authorization': `Bearer AH65FSZB6ZIZB6IAAAAIUMSA2DWAEPRSXY456FBAL2AWTMGYEFQ7DTJXX6F5GDX27IRXLCI`
+                  }
+                });
+                if (ratesRes.ok) {
+                  const ratesData = await ratesRes.json();
+                  if (ratesData.rates) {
+                    Object.entries(ratesData.rates).forEach(([addr, rateInfo]) => {
+                      ratesMap[addr.toLowerCase()] = {
+                        price: rateInfo.prices?.USD || 0,
+                        change24h: parseFloat(rateInfo.diff_24h?.USD) || 0
+                      };
+                    });
+                  }
+                }
+              } catch (rateErr) {
+                console.error("Error fetching rates from TonAPI", rateErr);
+              }
+            }
+            
             tonapiData.balances.forEach(b => {
               const symbol = b.jetton.symbol;
               const decimals = b.jetton.decimals || 9;
               const jettonBalance = parseFloat(b.balance) / Math.pow(10, decimals);
               mainnetBalances[symbol] = jettonBalance;
-              // Fallback to a default price of $0.001 if TonAPI rates does not track this jetton yet
-              const jettonPrice = b.price?.prices?.USD || 0.001;
+              
+              const cleanAddr = b.jetton.address.toLowerCase();
+              const rate = ratesMap[cleanAddr] || { price: b.price?.prices?.USD || 0, change24h: parseFloat(b.price?.diff_24h?.USD) || 0 };
+              const jettonPrice = rate.price;
+              
               mainnetCostBasis[symbol] = jettonPrice ? jettonPrice / (this.tokens.TON?.price || 7.24) : 0; // estimate cost basis in TON
               
               // Register this jetton in this.tokens dynamically so the portfolio page shows its price and worth!
@@ -513,7 +543,7 @@ class MockEngine {
                 address: b.jetton.address,
                 price: jettonPrice,
                 decimals,
-                change24h: b.price?.diff_24h?.USD || 0,
+                change24h: rate.change24h,
                 volume24h: 0,
                 liquidity: 0,
                 supply: 0,
