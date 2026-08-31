@@ -669,22 +669,22 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .scanner-left-panel {
-  flex: 8.5;
+  flex: 9.3;
   display: flex;
   flex-direction: column;
   overflow-y: auto;
   border-right: 1px solid var(--border-color);
-  padding: 14px;
+  padding: 12px 16px;
   transition: flex 0.3s ease;
 }
 
 .scanner-right-panel {
-  flex: 3.5;
+  flex: 2.7;
   display: flex;
   flex-direction: column;
   background: var(--bg-secondary);
   overflow: hidden;
-  padding: 14px;
+  padding: 12px;
   transition: all 0.3s ease;
 }
 
@@ -697,14 +697,14 @@ h1, h2, h3, h4, h5, h6 {
   display: none;
 }
 
-/* Scanner High Density Table View */
+/* Scanner High Density Bold Table View (Matching Reference Screenshot) */
 .scanner-table-wrapper {
   width: 100%;
   overflow-x: hidden;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  box-shadow: var(--shadow-sm);
+  background: #05080e;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
 }
 
 .scanner-table {
@@ -712,32 +712,43 @@ h1, h2, h3, h4, h5, h6 {
   table-layout: auto;
   border-collapse: collapse;
   text-align: left;
-  font-size: 0.72rem;
 }
 
 .scanner-table th {
   position: sticky;
   top: 0;
-  background: #080c14;
-  color: var(--text-muted);
+  background: #090d16;
+  color: #64748b;
   font-family: var(--font-mono);
-  font-weight: 600;
+  font-weight: 700;
   font-size: 0.65rem;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  padding: 8px 10px;
-  border-bottom: 1px solid var(--border-color);
+  letter-spacing: 0.06em;
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   z-index: 10;
 }
 
 .scanner-table td {
-  padding: 7px 10px;
+  padding: 10px 12px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.04);
   vertical-align: middle;
 }
 
 .scanner-table tr {
   transition: background 0.15s ease;
+}
+
+.scanner-table tr:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.bold-metric {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-weight: 800;
+  color: #ffffff;
+  font-size: 0.95rem;
+  letter-spacing: -0.01em;
 }
 
 .scanner-table tr:hover {

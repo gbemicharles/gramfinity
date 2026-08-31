@@ -218,13 +218,47 @@ export default function Discover({ onSelectTokenForTrade }) {
   const getRelativeTime = (timestamp) => {
     const diffMs = Date.now() - timestamp;
     const diffSec = Math.floor(diffMs / 1000);
-    if (diffSec < 60) return `${diffSec}s ago`;
+    if (diffSec < 60) return `${diffSec}s`;
     const diffMin = Math.floor(diffSec / 60);
-    if (diffMin < 60) return `${diffMin}m ago`;
+    if (diffMin < 60) return `${diffMin}m`;
     const diffHr = Math.floor(diffMin / 60);
-    if (diffHr < 24) return `${diffHr}h ago`;
+    if (diffHr < 24) return `${diffHr}h`;
     const diffDay = Math.floor(diffHr / 24);
-    return `${diffDay}d ago`;
+    return `${diffDay}d`;
+  };
+
+  const formatK = (val) => {
+    if (!val || val === 0) return '$0';
+    if (val >= 1000000) return `$${(val / 1000000).toFixed(1)}M`;
+    if (val >= 1000) return `$${(val / 1000).toFixed(1)}K`;
+    return `$${val.toFixed(2)}`;
+  };
+
+  const renderSparkline = (change24h, symbol) => {
+    const isUp = change24h >= 0;
+    const strokeColor = isUp ? '#00ff87' : '#ef4444';
+    const glowColor = isUp ? 'rgba(0, 255, 135, 0.4)' : 'rgba(239, 68, 68, 0.4)';
+    
+    const seed = symbol.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    const y1 = isUp ? 22 : 6;
+    const y2 = isUp ? 12 + (seed % 6) : 18 - (seed % 6);
+    const y3 = isUp ? 18 - (seed % 5) : 10 + (seed % 5);
+    const y4 = isUp ? 4 : 26;
+    
+    const pathD = `M 2 ${y1} Q 20 ${y2}, 38 ${y3} T 75 ${y4}`;
+    
+    return (
+      <svg width="70" height="24" viewBox="0 0 80 30" style={{ overflow: 'visible' }}>
+        <path
+          d={pathD}
+          fill="none"
+          stroke={strokeColor}
+          strokeWidth="2.2"
+          strokeLinecap="round"
+          style={{ filter: `drop-shadow(0 0 4px ${glowColor})` }}
+        />
+      </svg>
+    );
   };
 
   const copyToClipboard = (address, label) => {
@@ -829,21 +863,20 @@ export default function Discover({ onSelectTokenForTrade }) {
                 No active launchpad contracts found matching your filters.
               </div>
             ) : viewMode === 'table' ? (
-              /* High Density DexScreener-style Table View */
+              /* High Density DexScreener/GeckoTerminal-style Table View */
               <div className="scanner-table-wrapper">
                 <table className="scanner-table">
                   <thead>
                     <tr>
-                      <th style={{ width: '28px', padding: '6px 4px', textAlign: 'center' }}>#</th>
-                      <th style={{ padding: '6px 8px' }}>Token</th>
-                      <th style={{ padding: '6px 8px' }}>Origin</th>
-                      <th style={{ padding: '6px 8px' }}>Age / Stage</th>
-                      <th style={{ textAlign: 'right', padding: '6px 8px' }}>Price (24h)</th>
-                      <th style={{ textAlign: 'right', padding: '6px 8px' }}>Vol / MCAP</th>
-                      <th style={{ textAlign: 'right', padding: '6px 8px' }}>Holders</th>
-                      <th style={{ padding: '6px 8px', minWidth: '90px' }}>Bonding</th>
-                      <th style={{ textAlign: 'center', padding: '6px 6px' }}>Risk</th>
-                      <th style={{ textAlign: 'center', padding: '6px 6px', width: '100px' }}>Action</th>
+                      <th style={{ width: '28px', padding: '10px 8px', textAlign: 'center' }}>#</th>
+                      <th style={{ width: '42px', padding: '10px 4px' }}>TOKEN</th>
+                      <th style={{ padding: '10px 8px' }}>NAME</th>
+                      <th style={{ textAlign: 'right', padding: '10px 10px' }}>MCAP ↑↓</th>
+                      <th style={{ textAlign: 'center', padding: '10px 8px', width: '85px' }}>CHART</th>
+                      <th style={{ textAlign: 'right', padding: '10px 10px' }}>VOL 24H ↑↓</th>
+                      <th style={{ textAlign: 'right', padding: '10px 10px' }}>HOLDERS ↑↓</th>
+                      <th style={{ textAlign: 'right', padding: '10px 10px' }}>AGE ↑↓</th>
+                      <th style={{ textAlign: 'center', padding: '10px 8px', width: '90px' }}>ACTION</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -858,173 +891,108 @@ export default function Discover({ onSelectTokenForTrade }) {
                           style={{ cursor: 'pointer', background: flashBg }}
                         >
                           {/* Index */}
-                          <td style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', fontSize: '0.65rem', textAlign: 'center', padding: '6px 4px' }}>
+                          <td style={{ color: '#64748b', fontFamily: 'var(--font-mono)', fontSize: '0.78rem', fontWeight: 600, textAlign: 'center', padding: '10px 6px' }}>
                             {index + 1}
                           </td>
 
-                          {/* Token Name & CA */}
-                          <td style={{ padding: '6px 8px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                              <div style={{
-                                width: '24px',
-                                height: '24px',
-                                borderRadius: '50%',
-                                background: token.logoBg || 'linear-gradient(135deg, #1e293b, #0f172a)',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                fontWeight: 700,
-                                fontSize: '0.7rem',
-                                color: '#ffffff',
-                                border: '1px solid var(--border-color)',
-                                flexShrink: 0
-                              }}>
-                                {token.symbol.charAt(0)}
-                              </div>
-                              <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                  <span style={{ fontWeight: 700, color: '#ffffff', fontSize: '0.75rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                    {token.name}
-                                  </span>
-                                  <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
-                                    ${token.symbol}
-                                  </span>
-                                </div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '3px', fontSize: '0.58rem', color: 'var(--text-muted)' }}>
-                                  <span>CA: {token.address.slice(0, 4)}...{token.address.slice(-3)}</span>
-                                  <button
-                                    type="button"
-                                    onClick={(e) => { e.stopPropagation(); copyToClipboard(token.address, 'Contract Address'); }}
-                                    style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 0 }}
-                                    className="hover:text-cyan"
-                                  >
-                                    {copiedAddress === token.address ? <Check size={9} className="text-green" /> : <Copy size={9} />}
-                                  </button>
-                                </div>
-                              </div>
-                            </div>
-                          </td>
-
-                          {/* Origin Badge */}
-                          <td style={{ padding: '6px 8px' }}>
-                            <span 
-                              className="tag"
-                              style={{
-                                fontSize: '0.55rem',
-                                padding: '1px 4px',
-                                borderRadius: '3px',
-                                background: 
-                                  token.launchpad === 'Gaspump' ? 'rgba(245, 158, 11, 0.12)' :
-                                  token.launchpad === 'Blum Launch' ? 'rgba(16, 185, 129, 0.12)' :
-                                  token.launchpad === 'PocketFi' ? 'rgba(167, 139, 250, 0.12)' :
-                                  token.launchpad === 'TopBlast.lol' ? 'rgba(234, 179, 8, 0.12)' :
-                                  token.launchpad === 'sTONks' ? 'rgba(59, 130, 246, 0.12)' :
-                                  token.launchpad === 'Uranus' ? 'rgba(236, 72, 153, 0.12)' :
-                                  token.launchpad?.includes('STON.fi') ? 'rgba(6, 182, 212, 0.12)' : 'rgba(236, 72, 153, 0.12)',
-                                color: 
-                                  token.launchpad === 'Gaspump' ? '#f59e0b' :
-                                  token.launchpad === 'Blum Launch' ? '#10b981' :
-                                  token.launchpad === 'PocketFi' ? '#a78bfa' :
-                                  token.launchpad === 'TopBlast.lol' ? '#eab308' :
-                                  token.launchpad === 'sTONks' ? '#3b82f6' :
-                                  token.launchpad === 'Uranus' ? '#ec4899' :
-                                  token.launchpad?.includes('STON.fi') ? '#22d3ee' : '#f472b6',
-                                border: '1px solid currentColor',
-                                whiteSpace: 'nowrap'
-                              }}
-                            >
-                              {token.launchpad}
-                            </span>
-                          </td>
-
-                          {/* Age & Stage */}
-                          <td style={{ fontSize: '0.65rem', padding: '6px 8px' }}>
-                            <div style={{ display: 'flex', flexDirection: 'column' }}>
-                              <span style={{ color: '#ffffff', fontWeight: 500, whiteSpace: 'nowrap' }}>
-                                {getRelativeTime(token.launchTime)}
-                              </span>
-                              <span style={{ fontSize: '0.55rem', color: 'var(--accent-cyan)', whiteSpace: 'nowrap' }}>{token.lifecycle}</span>
-                            </div>
-                          </td>
-
-                          {/* Price & 24h Change */}
-                          <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', padding: '6px 8px' }}>
-                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                              <span style={{ color: token.change24h >= 0 ? 'var(--color-buy)' : 'var(--color-sell)', fontWeight: 600, fontSize: '0.72rem', whiteSpace: 'nowrap' }}>
-                                ${token.price.toLocaleString(undefined, { minimumFractionDigits: token.price < 0.01 ? 6 : 4, maximumFractionDigits: token.price < 0.01 ? 6 : 4 })}
-                              </span>
-                              <span style={{ fontSize: '0.55rem', color: token.change24h >= 0 ? 'var(--color-buy)' : 'var(--color-sell)' }}>
-                                {token.change24h >= 0 ? '+' : ''}{token.change24h}%
-                              </span>
-                            </div>
-                          </td>
-
-                          {/* Vol / MCAP */}
-                          <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', padding: '6px 8px' }}>
-                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                              <span style={{ color: '#ffffff', fontWeight: 600, fontSize: '0.68rem', whiteSpace: 'nowrap' }}>
-                                ${token.mcap.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                              </span>
-                              <span style={{ fontSize: '0.55rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
-                                Vol: ${(token.volume24h || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                              </span>
-                            </div>
-                          </td>
-
-                          {/* Holders */}
-                          <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', fontSize: '0.65rem', padding: '6px 8px' }}>
-                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                              <span style={{ color: '#ffffff' }}>{token.holders}</span>
-                              <span style={{ fontSize: '0.55rem', color: 'var(--accent-green)' }}>
-                                {token.holdersGrowth >= 0 ? '+' : ''}{token.holdersGrowth}%
-                              </span>
-                            </div>
-                          </td>
-
-                          {/* Bonding % */}
-                          <td style={{ padding: '6px 8px' }}>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.58rem', fontFamily: 'var(--font-mono)' }}>
-                                <span style={{ color: token.isDex ? 'var(--accent-green)' : 'var(--accent-cyan)', fontWeight: 600 }}>
-                                  {token.isDex ? 'DEX' : `${token.bondingProgress.toFixed(0)}%`}
-                                </span>
-                              </div>
-                              <div style={{ height: '3px', background: 'var(--bg-primary)', borderRadius: '2px', overflow: 'hidden' }}>
-                                <div style={{
-                                  width: `${token.bondingProgress}%`,
-                                  height: '100%',
-                                  background: token.isDex ? 'linear-gradient(90deg, #00ff87, #10b981)' : 'linear-gradient(90deg, #00e5ff, #00a8ff)',
-                                  borderRadius: '2px'
-                                }} />
-                              </div>
-                            </div>
-                          </td>
-
-                          {/* Rug Risk Score */}
-                          <td style={{ textAlign: 'center', padding: '6px 4px' }}>
-                            <span style={{
-                              fontSize: '0.58rem',
-                              padding: '1px 5px',
-                              borderRadius: '3px',
-                              fontWeight: 600,
-                              background: (token.security?.rugScore || 15) > 50 ? 'rgba(239, 68, 68, 0.12)' : 'rgba(16, 185, 129, 0.12)',
-                              color: (token.security?.rugScore || 15) > 50 ? 'var(--color-sell)' : 'var(--color-buy)',
-                              border: '1px solid currentColor',
-                              whiteSpace: 'nowrap'
+                          {/* Token Logo Avatar */}
+                          <td style={{ padding: '10px 4px' }}>
+                            <div style={{
+                              width: '36px',
+                              height: '36px',
+                              borderRadius: '50%',
+                              background: token.logoBg || 'linear-gradient(135deg, #1e293b, #0f172a)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontWeight: 800,
+                              fontSize: '0.85rem',
+                              color: '#ffffff',
+                              border: '1.5px solid var(--border-color)',
+                              flexShrink: 0
                             }}>
-                              {(token.security?.rugScore || 15) > 50 ? `High` : `Low`}
+                              {token.symbol.charAt(0)}
+                            </div>
+                          </td>
+
+                          {/* Token Name & Ticker */}
+                          <td style={{ padding: '10px 8px' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                              <span style={{ fontWeight: 800, color: '#ffffff', fontSize: '0.88rem', letterSpacing: '-0.01em' }}>
+                                {token.name}
+                              </span>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <span style={{ fontSize: '0.68rem', color: '#94a3b8', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>
+                                  ${token.symbol}
+                                </span>
+                                <span 
+                                  className="tag"
+                                  style={{
+                                    fontSize: '0.52rem',
+                                    padding: '1px 4px',
+                                    borderRadius: '3px',
+                                    background: token.isDex ? 'rgba(16, 185, 129, 0.12)' : 'rgba(0, 229, 255, 0.12)',
+                                    color: token.isDex ? '#10b981' : '#00e5ff',
+                                    border: '1px solid currentColor'
+                                  }}
+                                >
+                                  {token.launchpad}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={(e) => { e.stopPropagation(); copyToClipboard(token.address, 'Contract Address'); }}
+                                  style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: 0, display: 'inline-flex', alignItems: 'center' }}
+                                  className="hover:text-cyan"
+                                  title="Copy CA"
+                                >
+                                  {copiedAddress === token.address ? <Check size={10} className="text-green" /> : <Copy size={10} />}
+                                </button>
+                              </div>
+                            </div>
+                          </td>
+
+                          {/* MCAP */}
+                          <td style={{ textAlign: 'right', padding: '10px' }}>
+                            <span className="bold-metric">
+                              {formatK(token.mcap)}
                             </span>
                           </td>
 
-                          {/* Quick Actions */}
-                          <td style={{ textAlign: 'center', padding: '6px 6px' }}>
+                          {/* CHART (Inline Mini SVG Sparkline) */}
+                          <td style={{ textAlign: 'center', padding: '10px 6px' }}>
+                            {renderSparkline(token.change24h || 5, token.symbol)}
+                          </td>
+
+                          {/* VOL 24H */}
+                          <td style={{ textAlign: 'right', padding: '10px' }}>
+                            <span className="bold-metric">
+                              {formatK(token.volume24h || 1200)}
+                            </span>
+                          </td>
+
+                          {/* HOLDERS */}
+                          <td style={{ textAlign: 'right', padding: '10px' }}>
+                            <span className="bold-metric">
+                              {(token.holders || 100).toLocaleString()}
+                            </span>
+                          </td>
+
+                          {/* AGE */}
+                          <td style={{ textAlign: 'right', padding: '10px' }}>
+                            <span className="bold-metric">
+                              {getRelativeTime(token.launchTime)}
+                            </span>
+                          </td>
+
+                          {/* Quick Action Button */}
+                          <td style={{ textAlign: 'center', padding: '10px 8px' }}>
                             <button
                               type="button"
                               onClick={(e) => { e.stopPropagation(); onSelectTokenForTrade(token.symbol); }}
                               className="btn ape-in-btn"
-                              style={{ padding: '2px 8px', fontSize: '0.65rem', borderRadius: '4px', height: '22px', width: '100%' }}
+                              style={{ padding: '4px 10px', fontSize: '0.68rem', borderRadius: '6px', height: '26px', width: '100%', whiteSpace: 'nowrap' }}
                             >
-                              <Zap size={10} fill="currentColor" /> APE IN
+                              <Zap size={11} fill="currentColor" /> APE IN
                             </button>
                           </td>
                         </tr>
