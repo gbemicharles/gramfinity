@@ -81,7 +81,7 @@ const INITIAL_TOKENS = {
     holders: 1845201,
     security: { rugScore: 5, rugRisk: "Safe", verified: true, renounced: true, lockedLiquidity: 95 },
     decimals: 9,
-    launchpad: "STON.fi Launch",
+    launchpad: "STON.fi DEX",
     description: "A viral clicker game token on Telegram that transitioned into a web3 community ecosystem."
   },
   DOGS: {
@@ -108,7 +108,7 @@ const INITIAL_TOKENS = {
     holders: 4200150,
     security: { rugScore: 12, rugRisk: "Low Risk", verified: true, renounced: true, lockedLiquidity: 88 },
     decimals: 9,
-    launchpad: "DeDust Launch",
+    launchpad: "DeDust DEX",
     description: "The most Telegram-native meme coin, inspired by Spotty, the mascot drawn by Telegram founder Pavel Durov."
   },
   HMSTR: {
@@ -135,7 +135,7 @@ const INITIAL_TOKENS = {
     holders: 5310245,
     security: { rugScore: 18, rugRisk: "Low Risk", verified: true, renounced: false, lockedLiquidity: 75 },
     decimals: 9,
-    launchpad: "STON.fi Launch",
+    launchpad: "STON.fi DEX",
     description: "Token for the massive Hamster Kombat Telegram tap-to-earn game."
   },
   GRAM: {
@@ -410,7 +410,7 @@ class MockEngine {
       { ticker: "PAVEL", name: "Pavel Fan Token", launchpad: "TopBlast.lol" },
       { ticker: "TELE", name: "Telegram Portal", launchpad: "Blum Launch" },
       { ticker: "PUMP", name: "TON Pump Token", launchpad: "Gaspump" },
-      { ticker: "STON", name: "Ston Community", launchpad: "STON.fi Launch" },
+      { ticker: "STON", name: "Ston Community", launchpad: "STON.fi DEX" },
       { ticker: "CATS", name: "Cats Telegram", launchpad: "PocketFi" },
       { ticker: "Resistance", name: "Resistance Fighter", launchpad: "TopBlast.lol" }
     ];
@@ -634,10 +634,10 @@ class MockEngine {
       const DEX_LAUNCHPAD_MAP = {
         'uranus':       'TopBlast.lol',
         'stonks-pump':  'sTONks',
-        'stonfi':       'STON.fi Launch',
-        'stonfi-v2':    'STON.fi Launch',
-        'dedust':       'DeDust Launch',
-        'dedust-v2':    'DeDust Launch',
+        'stonfi':       'STON.fi DEX',
+        'stonfi-v2':    'STON.fi DEX',
+        'dedust':       'DeDust DEX',
+        'dedust-v2':    'DeDust DEX',
         'swap-coffee':  'Swap Coffee',
         'tonco':        'Tonco',
       };

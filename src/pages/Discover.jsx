@@ -18,7 +18,7 @@ export default function Discover({ onSelectTokenForTrade }) {
   const [selectedCategory, setSelectedCategory] = useState('ALL'); // ALL, Meme, DeFi, Gaming
   const [timeframeFilter, setTimeframeFilter] = useState('ALL'); // ALL, NEW_5M
   const [mcapFilter, setMcapFilter] = useState('ALL'); // ALL, UNDER_100K, OVER_100K
-  const [selectedLaunchpad, setSelectedLaunchpad] = useState('ALL'); // ALL, Gaspump, Blum Launch, PocketFi, TopBlast.lol, sTONks, Uranus, STON.fi Launch, DeDust Launch, Direct Mint
+  const [selectedLaunchpad, setSelectedLaunchpad] = useState('ALL'); // ALL, Gaspump, Blum Launch, PocketFi, TopBlast.lol, sTONks, Uranus, STON.fi DEX, DeDust DEX, Direct Mint
   const [sortBy, setSortBy] = useState('launchTime'); // launchTime, volume5m, volume1h, volume24h, holdersGrowth, liquidity, rugScore
   const [verifiedOnly, setVerifiedOnly] = useState(false);
   const [activeTab, setActiveTab] = useState('JUST_LAUNCHED'); // JUST_LAUNCHED, TRENDING, BONDED
@@ -620,7 +620,7 @@ export default function Discover({ onSelectTokenForTrade }) {
                 <option value="TopBlast.lol">TopBlast.lol</option>
                 <option value="sTONks">sTONks</option>
                 <option value="Uranus">Uranus</option>
-                <option value="STON.fi Launch">STON.fi Launch</option>
+                <option value="STON.fi DEX">STON.fi DEX</option>
               </select>
 
               <select
