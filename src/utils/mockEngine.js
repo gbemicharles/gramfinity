@@ -708,6 +708,9 @@ class MockEngine {
           });
 
           newPoolsData.data?.forEach(pool => {
+            const dexId = pool.relationships?.dex?.data?.id || '';
+            // Skip STON.fi and DeDust — they are pure DEXes, not launchpads. Tokens there are already graduated.
+            if (dexId === 'stonfi' || dexId === 'stonfi-v2' || dexId === 'dedust' || dexId === 'dedust-v2') return;
             const token = extractPoolToken(pool, includedMap);
             if (token && !mainnetTokens[token.symbol]) {
               mainnetTokens[token.symbol] = token;

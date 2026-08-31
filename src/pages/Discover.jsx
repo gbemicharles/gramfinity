@@ -407,11 +407,14 @@ export default function Discover({ onSelectTokenForTrade }) {
       // Real live mainnet TON tokens created in last 48 hours (fetched from GeckoTerminal API) + platform launchpad tokens (<100%)
       const NOW = Date.now();
       const FORTY_EIGHT_HOURS = 48 * 60 * 60 * 1000;
+      // DEXes to exclude — tokens there are already graduated, not fresh launches
+      const EXCLUDED_DEXES = ['STON.fi DEX', 'DeDust DEX'];
       list = list.filter(t => {
         if (t.symbol === 'TON') return false;
+        if (EXCLUDED_DEXES.includes(t.launchpad)) return false; // Skip graduated DEX tokens
         // Platform launchpad tokens building bonding curve (<100%)
         if (t.isPlatformLaunchpadToken && (t.bondingProgress || 0) < 100) return true;
-        // Real mainnet pools fetched from GeckoTerminal API created within last 48 hours
+        // Real mainnet pools from actual launchpads created within last 48 hours
         if (t.launchTime && (NOW - t.launchTime) <= FORTY_EIGHT_HOURS && !t.isPlatformLaunchpadToken) return true;
         return false;
       });
