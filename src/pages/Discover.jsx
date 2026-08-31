@@ -404,10 +404,20 @@ export default function Discover({ onSelectTokenForTrade }) {
 
     // Tab Filter
     if (activeTab === 'JUST_LAUNCHED') {
-      // Unbonded launchpad tokens launched within the last 24 hours
-      list = list.filter(t => !t.isDex && (Date.now() - t.launchTime <= 24 * 60 * 60 * 1000));
+      // Unbonded launchpad tokens currently building bonding curve
+      const launchpadList = ['Gaspump', 'TonFun', 'TopBlast.lol', 'sTONks', 'TonRaffles'];
+      list = list.filter(t => {
+        const isLaunchpadToken = launchpadList.includes(t.launchpad) || !t.isDex;
+        return isLaunchpadToken && (t.bondingProgress || 0) < 100;
+      });
     } else if (activeTab === 'BONDED') {
-      list = list.filter(t => t.isDex);
+      // Tokens from supported launchpads that hit 100% bonding and graduated to DEX
+      const launchpadList = ['Gaspump', 'TonFun', 'TopBlast.lol', 'sTONks', 'TonRaffles', 'STON.fi Launch', 'DeDust Launch'];
+      list = list.filter(t => {
+        const isLaunchpadToken = launchpadList.includes(t.launchpad) || t.launchpad?.includes('Launch');
+        const isFullyBonded = (t.bondingProgress >= 100) || (t.isDex && isLaunchpadToken);
+        return isLaunchpadToken && isFullyBonded;
+      });
     }
 
     // Sorting logic
