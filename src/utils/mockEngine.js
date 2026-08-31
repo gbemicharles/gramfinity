@@ -670,7 +670,7 @@ class MockEngine {
       };
       
       // Helper to extract token entry from a pool object
-      const extractPoolToken = (pool) => {
+      const extractPoolToken = (pool, includedMap = {}) => {
         const attributes = pool.attributes;
         const name = attributes.name || '';
         const parts = name.split(' / ');
@@ -693,10 +693,14 @@ class MockEngine {
         let address = pool.relationships?.base_token?.data?.id?.split('_').slice(1).join('_') || '';
         if (!address) address = 'EQ_mainnet_' + symbol;
         
+        const baseTokenId = pool.relationships?.base_token?.data?.id;
+        const fetchedImage = includedMap[baseTokenId]?.attributes?.image_url || attributes.image_url || attributes.logo_url || '';
+        
         return {
           symbol,
           name: attributes.base_token_name || symbol,
           address,
+          image: fetchedImage,
           price,
           change1h: parseFloat(attributes.price_percent_change?.h1 || 0),
           change24h,
@@ -722,11 +726,16 @@ class MockEngine {
       
       // 2. Fetch new pools (last 24h launches across ALL DEXes on TON)
       try {
-        const newPoolsRes = await fetch("https://api.geckoterminal.com/api/v2/networks/ton/new_pools?page=1");
+        const newPoolsRes = await fetch("https://api.geckoterminal.com/api/v2/networks/ton/new_pools?include=base_token&page=1");
         if (newPoolsRes.ok) {
           const newPoolsData = await newPoolsRes.json();
+          const includedMap = {};
+          newPoolsData.included?.forEach(item => {
+            if (item.type === 'token') includedMap[item.id] = item;
+          });
+
           newPoolsData.data?.forEach(pool => {
-            const token = extractPoolToken(pool);
+            const token = extractPoolToken(pool, includedMap);
             if (token && !mainnetTokens[token.symbol]) {
               mainnetTokens[token.symbol] = token;
               if (!this.charts[token.symbol]) {
@@ -741,13 +750,17 @@ class MockEngine {
       
       // 3. Fetch TopBlast.lol (Uranus DEX) pools specifically
       try {
-        const tbRes = await fetch("https://api.geckoterminal.com/api/v2/networks/ton/dexes/uranus/pools?page=1");
+        const tbRes = await fetch("https://api.geckoterminal.com/api/v2/networks/ton/dexes/uranus/pools?include=base_token&page=1");
         if (tbRes.ok) {
           const tbData = await tbRes.json();
+          const includedMap = {};
+          tbData.included?.forEach(item => {
+            if (item.type === 'token') includedMap[item.id] = item;
+          });
+
           tbData.data?.forEach(pool => {
-            const token = extractPoolToken(pool);
+            const token = extractPoolToken(pool, includedMap);
             if (token) {
-              // Always label as TopBlast, prefer higher volume entry
               if (!mainnetTokens[token.symbol] || token.volume24h > (mainnetTokens[token.symbol].volume24h || 0)) {
                 mainnetTokens[token.symbol] = { ...token, launchpad: 'TopBlast.lol' };
                 if (!this.charts[token.symbol]) {
@@ -766,11 +779,16 @@ class MockEngine {
       
       // 4. Fetch sTONks pools
       try {
-        const stonksRes = await fetch("https://api.geckoterminal.com/api/v2/networks/ton/dexes/stonks-pump/pools?page=1");
+        const stonksRes = await fetch("https://api.geckoterminal.com/api/v2/networks/ton/dexes/stonks-pump/pools?include=base_token&page=1");
         if (stonksRes.ok) {
           const stonksData = await stonksRes.json();
+          const includedMap = {};
+          stonksData.included?.forEach(item => {
+            if (item.type === 'token') includedMap[item.id] = item;
+          });
+
           stonksData.data?.forEach(pool => {
-            const token = extractPoolToken(pool);
+            const token = extractPoolToken(pool, includedMap);
             if (token) {
               if (!mainnetTokens[token.symbol] || token.volume24h > (mainnetTokens[token.symbol].volume24h || 0)) {
                 mainnetTokens[token.symbol] = { ...token, launchpad: 'sTONks' };
@@ -787,11 +805,16 @@ class MockEngine {
       
       // 5. Fetch trending pools on TON network (fills in established tokens)
       try {
-        const trendingRes = await fetch("https://api.geckoterminal.com/api/v2/networks/ton/trending_pools?page=1");
+        const trendingRes = await fetch("https://api.geckoterminal.com/api/v2/networks/ton/trending_pools?include=base_token&page=1");
         if (trendingRes.ok) {
           const trendingData = await trendingRes.json();
+          const includedMap = {};
+          trendingData.included?.forEach(item => {
+            if (item.type === 'token') includedMap[item.id] = item;
+          });
+
           trendingData.data?.forEach(pool => {
-            const token = extractPoolToken(pool);
+            const token = extractPoolToken(pool, includedMap);
             if (token && !mainnetTokens[token.symbol]) {
               mainnetTokens[token.symbol] = token;
               if (!this.charts[token.symbol]) {

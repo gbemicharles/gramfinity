@@ -265,6 +265,7 @@ export default function Discover({ onSelectTokenForTrade }) {
     if (token.image) return token.image;
     if (token.logo) return token.logo;
     if (token.icon) return token.icon;
+    if (token.imageUrl) return token.imageUrl;
 
     const symbolUpper = (token.symbol || '').toUpperCase();
     const map = {
@@ -277,9 +278,17 @@ export default function Discover({ onSelectTokenForTrade }) {
       'PEPE': 'https://assets.coingecko.com/coins/images/29850/large/pepe-token.png',
       'CATI': 'https://assets.coingecko.com/coins/images/39904/large/cati.png',
       'MAJOR': 'https://assets.coingecko.com/coins/images/40120/large/major.png',
+      'PX': 'https://assets.coingecko.com/coins/images/40890/large/px.png',
+      'MY': 'https://assets.coingecko.com/coins/images/38600/large/my.png',
     };
 
     if (map[symbolUpper]) return map[symbolUpper];
+
+    // If valid mainnet contract address, query TonAPI's live jetton metadata image proxy
+    if (token.address && (token.address.startsWith('EQ') || token.address.startsWith('UQ')) && !token.address.includes('gramfinity')) {
+      return `https://cache.tonapi.io/imgproxy/${token.address}/image.png`;
+    }
+
     return `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(symbolUpper || token.address || 'token')}`;
   };
 
