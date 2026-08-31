@@ -107,7 +107,7 @@ export default function Discover({ onSelectTokenForTrade }) {
       });
 
       socket.on('new_activity', (newTrade) => {
-        if (!newTrade || !newTrade.id) return;
+        if (!newTrade || !newTrade.id || !newTrade.token || ['UNKNOWN', 'unknown', 'test', 'TEST'].includes(newTrade.token)) return;
         setTradesLog(prev => {
           // Deduplicate by trade ID
           if (prev.some(item => item.id === newTrade.id)) return prev;

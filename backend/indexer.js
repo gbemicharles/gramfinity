@@ -434,6 +434,29 @@ function broadcastTokenDeployment(token) {
   req.end();
 }
 
+// Helper to extract clean token symbol from pool name & base token metadata
+function extractCleanSymbol(poolName, baseTokenObj) {
+  if (baseTokenObj && baseTokenObj.symbol && typeof baseTokenObj.symbol === 'string') {
+    const sym = baseTokenObj.symbol.trim();
+    if (sym.length > 0 && !['TON', 'USDT', 'USDC', 'UNKNOWN', 'unknown', 'test', 'TEST'].includes(sym)) {
+      return sym.replace('$', '').toUpperCase();
+    }
+  }
+  if (poolName && typeof poolName === 'string') {
+    const parts = poolName.split(' / ').map(p => p.trim());
+    if (parts.length >= 2) {
+      const quoteCoins = ['TON', 'WTON', 'USDT', 'USDC', 'USD'];
+      const nonQuote = parts.find(p => !quoteCoins.includes(p.toUpperCase()));
+      if (nonQuote && nonQuote.length > 0 && !['UNKNOWN', 'test', 'unknown'].includes(nonQuote.toLowerCase())) {
+        return nonQuote.replace('$', '').toUpperCase();
+      }
+      if (parts[0].toUpperCase() !== 'TON' && parts[0].toUpperCase() !== 'USDT') return parts[0].replace('$', '').toUpperCase();
+      if (parts[1].toUpperCase() !== 'TON' && parts[1].toUpperCase() !== 'USDT') return parts[1].replace('$', '').toUpperCase();
+    }
+  }
+  return null;
+}
+
 // REAL DEX SWAP EVENT INDEXER
 // Polls real DEX trade events from GeckoTerminal & TonAPI for TON pools, normalizes them, stores in Postgres, and broadcasts via WebSockets
 async function fetchAndSaveRealDexTrades() {
@@ -455,7 +478,7 @@ async function fetchAndSaveRealDexTrades() {
 
     if (!res || !res.data) return;
 
-    const pools = res.data.slice(0, 6);
+    const pools = res.data.slice(0, 8);
     const includedMap = {};
     res.included?.forEach(item => {
       if (item.type === 'token') includedMap[item.id] = item;
@@ -483,7 +506,12 @@ async function fetchAndSaveRealDexTrades() {
 
       const baseTokenId = pool.relationships?.base_token?.data?.id;
       const baseToken = includedMap[baseTokenId]?.attributes;
-      const symbol = baseToken?.symbol || pool.attributes?.name?.split(' / ')?.[0] || 'JETTON';
+      const poolName = pool.attributes?.name || '';
+      const symbol = extractCleanSymbol(poolName, baseToken);
+
+      // Skip trades if symbol is UNKNOWN or invalid
+      if (!symbol || symbol === 'UNKNOWN' || symbol === 'TEST') continue;
+
       const tokenAddress = baseTokenId?.split('_')?.[1] || poolAddress;
       const dexId = pool.relationships?.dex?.data?.id || '';
       const launchpad = dexId === 'stonfi' || dexId === 'stonfi-v2' ? 'STON.fi DEX' :
@@ -518,6 +546,18 @@ async function fetchAndSaveRealDexTrades() {
           tokenAddress,
           amountToken: Math.round(amountToken),
           amountTON,
+          amountUSD,
+          launchpad,
+          time
+        };
+
+        await saveAndBroadcastActivity(tradeObj);
+      }
+    }
+  } catch (err) {
+    console.error('❌ Error indexing real DEX trades:', err.message);
+  }
+}
           amountUSD,
           launchpad,
           time
