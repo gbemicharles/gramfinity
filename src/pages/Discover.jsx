@@ -339,7 +339,8 @@ export default function Discover({ onSelectTokenForTrade }) {
 
     // Tab Filter
     if (activeTab === 'JUST_LAUNCHED') {
-      list = list.filter(t => !t.isDex);
+      // Unbonded launchpad tokens launched within the last 24 hours
+      list = list.filter(t => !t.isDex && (Date.now() - t.launchTime <= 24 * 60 * 60 * 1000));
     } else if (activeTab === 'BONDED') {
       list = list.filter(t => t.isDex);
     }
@@ -1020,7 +1021,7 @@ export default function Discover({ onSelectTokenForTrade }) {
                           <td style={{ fontSize: '0.68rem' }}>
                             <div style={{ display: 'flex', flexDirection: 'column' }}>
                               <span style={{ color: '#ffffff', fontWeight: 500 }}>
-                                {Math.floor((Date.now() - token.launchTime) / (60 * 1000)) <= 0 ? 'Just now' : `${Math.floor((Date.now() - token.launchTime) / (60 * 1000))}m ago`}
+                                {getRelativeTime(token.launchTime)}
                               </span>
                               <span style={{ fontSize: '0.58rem', color: 'var(--accent-cyan)' }}>{token.lifecycle}</span>
                             </div>
