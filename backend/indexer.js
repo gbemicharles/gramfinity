@@ -588,6 +588,10 @@ async function fetchAndSaveRealDexTrades() {
         const amountTON = amountUSD > 0 ? parseFloat((amountUSD / 7.24).toFixed(2)) : parseFloat((amountToken * 0.001).toFixed(2));
         const time = attr.block_timestamp ? new Date(attr.block_timestamp).getTime() : Date.now();
 
+        // STRICT TIME CUTOFF: Discard trades older than 15 minutes to guarantee 100% fresh, real-time activity
+        const maxAgeMs = 15 * 60 * 1000;
+        if (Date.now() - time > maxAgeMs) continue;
+
         const tradeObj = {
           id,
           buyer,

@@ -88,7 +88,9 @@ export default function Discover({ onSelectTokenForTrade }) {
         if (res.ok) {
           const data = await res.json();
           if (Array.isArray(data)) {
-            const filtered = data.filter(item => item && item.token && !STABLECOIN_SYMBOLS.includes(item.token));
+            const now = Date.now();
+            const maxAgeMs = 15 * 60 * 1000; // 15 minutes cutoff
+            const filtered = data.filter(item => item && item.token && !STABLECOIN_SYMBOLS.includes(item.token) && (now - Number(item.time || 0) <= maxAgeMs));
             setTradesLog(filtered);
           }
         }

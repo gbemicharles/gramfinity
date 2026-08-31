@@ -256,7 +256,9 @@ app.get('/api/activities', async (req, res) => {
           launchpad,
           EXTRACT(EPOCH FROM time) * 1000 AS time
         FROM activities
-        WHERE token NOT IN ('USDT', 'USDC', 'USD', 'TON', 'WTON', 'MYTONWALLET', 'UNKNOWN', 'unknown', 'test', 'TEST', '') AND token IS NOT NULL
+        WHERE token NOT IN ('USDT', 'USDC', 'USD', 'TON', 'WTON', 'MYTONWALLET', 'UNKNOWN', 'unknown', 'test', 'TEST', '') 
+          AND token IS NOT NULL
+          AND time >= NOW() - INTERVAL '30 minutes'
         ORDER BY time DESC
         LIMIT 50
       `);
