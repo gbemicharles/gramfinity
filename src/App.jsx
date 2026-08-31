@@ -454,19 +454,9 @@ export default function App() {
           )}
         </main>
 
-        {/* 5. BOTTOM NAVIGATION BAR (for TMA Mobile View) */}
-        {tmaMode && (
-          <nav style={{
-            gridArea: 'bottomnav',
-            background: 'var(--bg-secondary)',
-            borderTop: '1px solid var(--border-color)',
-            display: 'flex',
-            justifyContent: 'space-around',
-            alignItems: 'center',
-            zIndex: 10,
-            padding: '4px 0'
-          }}>
-            <button
+        {/* 5. BOTTOM NAVIGATION BAR (for Mobile & TMA Views) */}
+        <nav className="mobile-bottom-nav">
+          <button
               onClick={() => setActivePage('discover')}
               style={{
                 background: 'transparent',
@@ -599,7 +589,6 @@ export default function App() {
               <span style={{ transform: 'scale(0.95)' }}>Wallet</span>
             </button>
           </nav>
-        )}
 
       </div>
     );
