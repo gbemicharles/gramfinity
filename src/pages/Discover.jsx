@@ -404,20 +404,11 @@ export default function Discover({ onSelectTokenForTrade }) {
 
     // Tab Filter
     if (activeTab === 'JUST_LAUNCHED') {
-      // Unbonded launchpad tokens currently building bonding curve
-      const launchpadList = ['Gaspump', 'TonFun', 'TopBlast.lol', 'sTONks', 'TonRaffles'];
-      list = list.filter(t => {
-        const isLaunchpadToken = launchpadList.includes(t.launchpad) || !t.isDex;
-        return isLaunchpadToken && (t.bondingProgress || 0) < 100;
-      });
+      // Tokens created on launchpad currently building bonding curve (0% - 99.9%)
+      list = list.filter(t => (t.isLaunchpadToken || t.launchpad === 'Gaspump' || t.launchpad === 'TonFun') && (t.bondingProgress || 0) < 100);
     } else if (activeTab === 'BONDED') {
-      // Tokens from supported launchpads that hit 100% bonding and graduated to DEX
-      const launchpadList = ['Gaspump', 'TonFun', 'TopBlast.lol', 'sTONks', 'TonRaffles', 'STON.fi Launch', 'DeDust Launch'];
-      list = list.filter(t => {
-        const isLaunchpadToken = launchpadList.includes(t.launchpad) || t.launchpad?.includes('Launch');
-        const isFullyBonded = (t.bondingProgress >= 100) || (t.isDex && isLaunchpadToken);
-        return isLaunchpadToken && isFullyBonded;
-      });
+      // ONLY tokens created on launchpad that completed 100% bonding and graduated to DEX!
+      list = list.filter(t => (t.isLaunchpadToken || t.launchpad === 'Gaspump' || t.launchpad === 'TonFun') && (t.bondingProgress || 0) >= 100);
     }
 
     // Sorting logic
@@ -840,7 +831,24 @@ export default function Discover({ onSelectTokenForTrade }) {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredTokens.map((token, index) => {
+                    {filteredTokens.length === 0 ? (
+                      <tr>
+                        <td colSpan="9" style={{ textAlign: 'center', padding: '45px 20px', background: '#05070c' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                            <ShieldCheck size={36} style={{ color: activeTab === 'BONDED' ? '#00ff87' : 'rgba(255,255,255,0.2)' }} />
+                            <span style={{ fontWeight: 800, color: '#ffffff', fontSize: '0.95rem' }}>
+                              {activeTab === 'BONDED' ? 'No Bonded Tokens Yet' : 'No Tokens Found'}
+                            </span>
+                            <span style={{ fontSize: '0.74rem', color: '#64748b', maxWidth: '380px', lineHeight: '1.4' }}>
+                              {activeTab === 'BONDED'
+                                ? 'Tokens launched on Gramfinity / supported launchpads will appear here automatically once they reach 100% bonding progress and graduate to DEX.'
+                                : 'No tokens match your search query or filter settings.'}
+                            </span>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredTokens.map((token, index) => {
                       const flash = flashStates[token.symbol];
                       const flashBg = flash ? (flash.type === 'up' ? 'rgba(0, 255, 135, 0.08)' : 'rgba(239, 68, 68, 0.08)') : 'transparent';
                       const isHighRisk = (token.security?.rugScore || 15) > 50;
@@ -1018,7 +1026,7 @@ export default function Discover({ onSelectTokenForTrade }) {
                           </td>
                         </tr>
                       );
-                    })}
+                    }))}
                   </tbody>
                 </table>
               </div>
