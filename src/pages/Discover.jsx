@@ -435,119 +435,70 @@ export default function Discover({ onSelectTokenForTrade }) {
         {/* LEFT PANEL: Filters, Tabs, Table/Cards View */}
         <div className="scanner-left-panel">
           
-          {/* Streamlined Compact Metrics & Control Header Ribbon */}
+          {/* Single High-Density Consolidated Toolbar */}
           <div style={{
             display: 'flex',
             flexWrap: 'wrap',
             alignItems: 'center',
             justifyContent: 'space-between',
-            gap: '12px',
-            marginBottom: '12px',
-            background: 'linear-gradient(135deg, rgba(12, 16, 23, 0.95), rgba(6, 9, 15, 0.95))',
-            border: '1px solid var(--border-color)',
-            borderLeft: '3px solid var(--accent-cyan)',
-            padding: '8px 14px',
+            gap: '8px',
+            marginBottom: '8px',
+            background: '#070a10',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
+            padding: '6px 10px',
             borderRadius: '8px',
             flexShrink: 0
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
-              <h1 style={{ fontSize: '0.9rem', color: '#ffffff', display: 'flex', alignItems: 'center', gap: '6px', margin: 0 }}>
-                <TrendingUp className="text-cyan animate-pulse" size={16} /> Token Scanner
-              </h1>
-              
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '0.7rem', fontFamily: 'var(--font-mono)' }}>
-                <span style={{ color: 'var(--text-muted)' }}>
-                  Active: <strong style={{ color: '#ffffff' }}>{statsSummary.totalLaunches}</strong>
-                </span>
-                <span style={{ color: 'var(--text-muted)' }}>
-                  24h Vol: <strong style={{ color: 'var(--accent-cyan)' }}>${statsSummary.totalVolume.toLocaleString(undefined, { maximumFractionDigits: 0 })}</strong>
-                </span>
-                {statsSummary.hotGainer && (
-                  <span style={{ color: 'var(--text-muted)' }}>
-                    Top Gainer: <strong style={{ color: 'var(--accent-green)' }}>${statsSummary.hotGainer.symbol} +{statsSummary.hotGainer.change24h}%</strong>
-                  </span>
-                )}
-              </div>
-            </div>
-
-            {/* Layout View Mode Switcher & Expand Workspace Controls */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <div style={{ display: 'flex', gap: '2px', background: 'var(--bg-primary)', padding: '2px', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
-                <button
-                  type="button"
-                  title="High Density Table View"
-                  onClick={() => setViewMode('table')}
-                  className={`view-switcher-btn ${viewMode === 'table' ? 'active' : ''}`}
-                  style={{ border: 'none' }}
-                >
-                  <Table size={13} /> Table
-                </button>
-                <button
-                  type="button"
-                  title="Card Grid View"
-                  onClick={() => setViewMode('grid')}
-                  className={`view-switcher-btn ${viewMode === 'grid' ? 'active' : ''}`}
-                  style={{ border: 'none' }}
-                >
-                  <LayoutGrid size={13} /> Grid
-                </button>
-              </div>
-
+            {/* Category Tabs */}
+            <div style={{ display: 'flex', gap: '4px' }}>
               <button
-                type="button"
-                onClick={() => setFeedCollapsed(prev => !prev)}
-                className="view-switcher-btn"
-                title={feedCollapsed ? "Show Live Activity Feed" : "Collapse Feed (Full Width Workspace)"}
-                style={{
-                  borderColor: feedCollapsed ? 'var(--accent-cyan)' : 'var(--border-color)',
-                  color: feedCollapsed ? 'var(--accent-cyan)' : 'var(--text-secondary)'
-                }}
+                onClick={() => setActiveTab('JUST_LAUNCHED')}
+                className={`tab-btn ${activeTab === 'JUST_LAUNCHED' ? 'active' : ''}`}
+                style={{ fontSize: '0.7rem', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: '4px' }}
               >
-                {feedCollapsed ? <PanelRightOpen size={13} /> : <PanelRightClose size={13} />}
-                {feedCollapsed ? 'Show Feed' : 'Full Width'}
+                <Rocket size={11} /> Just Launched
+              </button>
+              <button
+                onClick={() => setActiveTab('TRENDING')}
+                className={`tab-btn ${activeTab === 'TRENDING' ? 'active' : ''}`}
+                style={{ fontSize: '0.7rem', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: '4px' }}
+              >
+                <Flame size={11} /> Trending
+              </button>
+              <button
+                onClick={() => setActiveTab('BONDED')}
+                className={`tab-btn ${activeTab === 'BONDED' ? 'active' : ''}`}
+                style={{ fontSize: '0.7rem', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: '4px' }}
+              >
+                <ShieldCheck size={11} /> Bonded
               </button>
             </div>
-          </div>
 
-          {/* Filters Row */}
-          <div style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            gap: '8px',
-            alignItems: 'center',
-            marginBottom: '12px',
-            background: 'var(--bg-secondary)',
-            padding: '8px 12px',
-            borderRadius: '8px',
-            border: '1px solid var(--border-color)',
-            flexShrink: 0
-          }}>
-            {/* Search Box */}
-            <div style={{ position: 'relative', minWidth: '140px', flex: '1' }}>
-              <input
-                type="text"
-                placeholder="Search symbol, CA..."
-                className="input-field"
-                style={{ paddingLeft: '28px', height: '26px', fontSize: '0.7rem', borderRadius: '6px' }}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-              <Search size={11} style={{ position: 'absolute', left: '8px', top: '7px', color: 'var(--text-muted)' }} />
-            </div>
+            {/* Search Box & Filters */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, maxWidth: '420px', minWidth: '200px' }}>
+              <div style={{ position: 'relative', width: '100%' }}>
+                <input
+                  type="text"
+                  placeholder="Search symbol, CA..."
+                  className="input-field"
+                  style={{ paddingLeft: '26px', height: '26px', fontSize: '0.68rem', borderRadius: '6px', background: 'rgba(0,0,0,0.4)' }}
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+                <Search size={11} style={{ position: 'absolute', left: '8px', top: '7px', color: 'var(--text-muted)' }} />
+              </div>
 
-            {/* Launchpad Select */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Origin:</span>
               <select
                 value={selectedLaunchpad}
                 onChange={(e) => setSelectedLaunchpad(e.target.value)}
                 style={{
-                  background: 'var(--bg-primary)',
+                  background: 'rgba(0,0,0,0.4)',
                   border: '1px solid var(--border-color)',
                   color: 'var(--text-primary)',
                   fontSize: '0.68rem',
                   padding: '2px 6px',
                   borderRadius: '6px',
+                  height: '26px',
                   outline: 'none',
                   cursor: 'pointer'
                 }}
@@ -560,150 +511,128 @@ export default function Discover({ onSelectTokenForTrade }) {
                 <option value="sTONks">sTONks</option>
                 <option value="Uranus">Uranus</option>
                 <option value="STON.fi Launch">STON.fi Launch</option>
-                <option value="DeDust Launch">DeDust Launch</option>
-                <option value="Direct Mint">Direct Mint</option>
               </select>
-            </div>
 
-            {/* Sort Select */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}><Filter size={10} style={{ display: 'inline', marginRight: '1px' }} /> Sort:</span>
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
                 style={{
-                  background: 'var(--bg-primary)',
+                  background: 'rgba(0,0,0,0.4)',
                   border: '1px solid var(--border-color)',
                   color: 'var(--text-primary)',
                   fontSize: '0.68rem',
                   padding: '2px 6px',
                   borderRadius: '6px',
+                  height: '26px',
                   outline: 'none',
                   cursor: 'pointer'
                 }}
               >
-                <option value="launchTime">Newest Minted</option>
-                <option value="volume5m">5M Volume</option>
-                <option value="volume1h">1H Volume</option>
-                <option value="volume24h">24H Volume</option>
-                <option value="holdersGrowth">Holders Growth</option>
-                <option value="liquidity">Liquidity</option>
+                <option value="launchTime">Newest</option>
+                <option value="volume24h">24h Vol</option>
+                <option value="volume5m">5m Vol</option>
+                <option value="holdersGrowth">Holders</option>
                 <option value="rugScore">Rug Score</option>
               </select>
-            </div>
 
-            {/* Category selection */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Cat:</span>
-              <select
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
+              <button
+                type="button"
+                onClick={() => setShowAdvancedFilters(prev => !prev)}
+                className="btn btn-secondary"
                 style={{
-                  background: 'var(--bg-primary)',
-                  border: '1px solid var(--border-color)',
-                  color: 'var(--text-primary)',
-                  fontSize: '0.68rem',
-                  padding: '2px 6px',
-                  borderRadius: '6px',
-                  outline: 'none',
+                  height: '26px',
+                  padding: '0 6px',
+                  fontSize: '0.65rem',
+                  borderColor: showAdvancedFilters ? 'var(--accent-cyan)' : 'var(--border-color)',
+                  color: showAdvancedFilters ? 'var(--accent-cyan)' : 'var(--text-secondary)',
+                  whiteSpace: 'nowrap',
                   cursor: 'pointer'
                 }}
               >
-                <option value="ALL">All Categories</option>
-                <option value="Meme">Meme</option>
-                <option value="DeFi">DeFi</option>
-                <option value="Gaming">Gaming</option>
-              </select>
+                <Filter size={10} /> Ranges
+              </button>
             </div>
 
-            {/* Timeframe Radar Select */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Radar:</span>
-              <select
-                value={timeframeFilter}
-                onChange={(e) => setTimeframeFilter(e.target.value)}
+            {/* Metric Chips & Layout Controls */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{ fontSize: '0.65rem', fontFamily: 'var(--font-mono)', display: 'flex', gap: '8px' }}>
+                <span style={{ color: 'var(--text-muted)' }}>
+                  Active: <strong style={{ color: '#ffffff' }}>{statsSummary.totalLaunches}</strong>
+                </span>
+                <span style={{ color: 'var(--text-muted)' }}>
+                  Vol: <strong style={{ color: 'var(--accent-cyan)' }}>{formatK(statsSummary.totalVolume)}</strong>
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', gap: '2px', background: 'var(--bg-primary)', padding: '2px', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
+                <button
+                  type="button"
+                  onClick={() => setViewMode('table')}
+                  className={`view-switcher-btn ${viewMode === 'table' ? 'active' : ''}`}
+                  style={{ border: 'none', padding: '2px 6px', fontSize: '0.65rem' }}
+                >
+                  <Table size={11} /> Table
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode('grid')}
+                  className={`view-switcher-btn ${viewMode === 'grid' ? 'active' : ''}`}
+                  style={{ border: 'none', padding: '2px 6px', fontSize: '0.65rem' }}
+                >
+                  <LayoutGrid size={11} /> Grid
+                </button>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setFeedCollapsed(prev => !prev)}
+                className="view-switcher-btn"
                 style={{
-                  background: 'var(--bg-primary)',
-                  border: '1px solid var(--border-color)',
-                  color: 'var(--text-primary)',
-                  fontSize: '0.68rem',
                   padding: '2px 6px',
-                  borderRadius: '6px',
-                  outline: 'none',
-                  cursor: 'pointer'
+                  fontSize: '0.65rem',
+                  borderColor: feedCollapsed ? 'var(--accent-cyan)' : 'var(--border-color)',
+                  color: feedCollapsed ? 'var(--accent-cyan)' : 'var(--text-secondary)'
                 }}
+                title={feedCollapsed ? "Show Live Feed" : "Full Width Workspace"}
               >
-                <option value="ALL">All Radar</option>
-                <option value="NEW_1M">Last 1 Min</option>
-                <option value="NEW_5M">Last 5 Mins</option>
-                <option value="NEW_1H">Last 1 Hour</option>
-                <option value="NEWLY_MIGRATED">Newly Migrated</option>
-              </select>
+                {feedCollapsed ? <PanelRightOpen size={11} /> : <PanelRightClose size={11} />}
+                {feedCollapsed ? 'Show Feed' : 'Full Width'}
+              </button>
             </div>
-
-            {/* Verified toggle */}
-            <label style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.68rem', color: 'var(--text-primary)', cursor: 'pointer', border: '1px solid var(--border-color)', padding: '2px 6px', borderRadius: '6px', background: 'var(--bg-primary)' }}>
-              <input
-                type="checkbox"
-                checked={verifiedOnly}
-                onChange={(e) => setVerifiedOnly(e.target.checked)}
-                style={{ accentColor: 'var(--accent-cyan)', cursor: 'pointer' }}
-              />
-              Verified
-            </label>
-
-            {/* Advanced Range Filters Button */}
-            <button
-              onClick={() => setShowAdvancedFilters(prev => !prev)}
-              className="btn btn-secondary"
-              style={{
-                height: '24px',
-                padding: '0 8px',
-                fontSize: '0.68rem',
-                borderColor: showAdvancedFilters ? 'var(--accent-cyan)' : 'var(--border-color)',
-                color: showAdvancedFilters ? 'var(--accent-cyan)' : 'var(--text-secondary)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-                cursor: 'pointer'
-              }}
-            >
-              <Filter size={10} /> {showAdvancedFilters ? 'Hide DEX Filters' : 'DEX Filters'}
-            </button>
           </div>
 
-          {/* Advanced Collapsible Filter Panel */}
+          {/* Advanced Range Filters Panel */}
           {showAdvancedFilters && (
             <div style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
-              gap: '10px',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+              gap: '8px',
               background: 'var(--bg-secondary)',
               border: '1px solid var(--border-color)',
               borderRadius: '8px',
-              padding: '12px',
-              marginBottom: '12px',
+              padding: '8px 10px',
+              marginBottom: '8px',
               animation: 'slideIn 0.25s ease-out forwards',
               flexShrink: 0
             }}>
               {/* Market Cap Min/Max */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <span style={{ fontSize: '0.62rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Market Cap ($)</span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                <span style={{ fontSize: '0.6rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Market Cap ($)</span>
                 <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
                   <input
                     type="number"
                     placeholder="Min"
                     className="input-field"
-                    style={{ height: '24px', padding: '2px 6px', fontSize: '0.68rem' }}
+                    style={{ height: '22px', padding: '2px 4px', fontSize: '0.65rem' }}
                     value={minMcap}
                     onChange={(e) => setMinMcap(e.target.value)}
                   />
-                  <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>to</span>
+                  <span style={{ fontSize: '0.58rem', color: 'var(--text-muted)' }}>to</span>
                   <input
                     type="number"
                     placeholder="Max"
                     className="input-field"
-                    style={{ height: '24px', padding: '2px 6px', fontSize: '0.68rem' }}
+                    style={{ height: '22px', padding: '2px 4px', fontSize: '0.65rem' }}
                     value={maxMcap}
                     onChange={(e) => setMaxMcap(e.target.value)}
                   />
@@ -711,118 +640,63 @@ export default function Discover({ onSelectTokenForTrade }) {
               </div>
 
               {/* Volume 24h Min/Max */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <span style={{ fontSize: '0.62rem', color: 'var(--text-secondary)', fontWeight: 600 }}>24h Volume ($)</span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                <span style={{ fontSize: '0.6rem', color: 'var(--text-secondary)', fontWeight: 600 }}>24h Volume ($)</span>
                 <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
                   <input
                     type="number"
                     placeholder="Min"
                     className="input-field"
-                    style={{ height: '24px', padding: '2px 6px', fontSize: '0.68rem' }}
+                    style={{ height: '22px', padding: '2px 4px', fontSize: '0.65rem' }}
                     value={minVolume}
                     onChange={(e) => setMinVolume(e.target.value)}
                   />
-                  <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>to</span>
+                  <span style={{ fontSize: '0.58rem', color: 'var(--text-muted)' }}>to</span>
                   <input
                     type="number"
                     placeholder="Max"
                     className="input-field"
-                    style={{ height: '24px', padding: '2px 6px', fontSize: '0.68rem' }}
+                    style={{ height: '22px', padding: '2px 4px', fontSize: '0.65rem' }}
                     value={maxVolume}
                     onChange={(e) => setMaxVolume(e.target.value)}
                   />
                 </div>
               </div>
 
-              {/* Liquidity Min/Max */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <span style={{ fontSize: '0.62rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Liquidity ($)</span>
-                <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-                  <input
-                    type="number"
-                    placeholder="Min"
-                    className="input-field"
-                    style={{ height: '24px', padding: '2px 6px', fontSize: '0.68rem' }}
-                    value={minLiquidity}
-                    onChange={(e) => setMinLiquidity(e.target.value)}
-                  />
-                  <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>to</span>
-                  <input
-                    type="number"
-                    placeholder="Max"
-                    className="input-field"
-                    style={{ height: '24px', padding: '2px 6px', fontSize: '0.68rem' }}
-                    value={maxLiquidity}
-                    onChange={(e) => setMaxLiquidity(e.target.value)}
-                  />
-                </div>
-              </div>
-
               {/* Holders Min/Max */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <span style={{ fontSize: '0.62rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Holders Count</span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                <span style={{ fontSize: '0.6rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Holders Count</span>
                 <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
                   <input
                     type="number"
                     placeholder="Min"
                     className="input-field"
-                    style={{ height: '24px', padding: '2px 6px', fontSize: '0.68rem' }}
+                    style={{ height: '22px', padding: '2px 4px', fontSize: '0.65rem' }}
                     value={minHolders}
                     onChange={(e) => setMinHolders(e.target.value)}
                   />
-                  <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>to</span>
+                  <span style={{ fontSize: '0.58rem', color: 'var(--text-muted)' }}>to</span>
                   <input
                     type="number"
                     placeholder="Max"
                     className="input-field"
-                    style={{ height: '24px', padding: '2px 6px', fontSize: '0.68rem' }}
+                    style={{ height: '22px', padding: '2px 4px', fontSize: '0.65rem' }}
                     value={maxHolders}
                     onChange={(e) => setMaxHolders(e.target.value)}
                   />
                 </div>
               </div>
 
-              {/* Rug Score Min/Max */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <span style={{ fontSize: '0.62rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Rug Score (0 - 100)</span>
-                <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-                  <input
-                    type="number"
-                    placeholder="Min"
-                    className="input-field"
-                    style={{ height: '24px', padding: '2px 6px', fontSize: '0.68rem' }}
-                    value={minRugScore}
-                    onChange={(e) => setMinRugScore(e.target.value)}
-                  />
-                  <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>to</span>
-                  <input
-                    type="number"
-                    placeholder="Max"
-                    className="input-field"
-                    style={{ height: '24px', padding: '2px 6px', fontSize: '0.68rem' }}
-                    value={maxRugScore}
-                    onChange={(e) => setMaxRugScore(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              {/* Reset Filters button */}
+              {/* Clear Button */}
               <div style={{ display: 'flex', alignItems: 'flex-end' }}>
                 <button
                   type="button"
                   className="btn btn-secondary"
-                  style={{ width: '100%', height: '24px', fontSize: '0.65rem', padding: '0', cursor: 'pointer' }}
+                  style={{ width: '100%', height: '22px', fontSize: '0.62rem', padding: '0', cursor: 'pointer' }}
                   onClick={() => {
-                    setMinMcap('');
-                    setMaxMcap('');
-                    setMinVolume('');
-                    setMaxVolume('');
-                    setMinLiquidity('');
-                    setMaxLiquidity('');
-                    setMinHolders('');
-                    setMaxHolders('');
-                    setMinRugScore('');
-                    setMaxRugScore('');
+                    setMinMcap(''); setMaxMcap('');
+                    setMinVolume(''); setMaxVolume('');
+                    setMinHolders(''); setMaxHolders('');
                   }}
                 >
                   Clear Ranges
@@ -830,31 +704,6 @@ export default function Discover({ onSelectTokenForTrade }) {
               </div>
             </div>
           )}
-
-          {/* Primary Scanner Categorization Tabs */}
-          <div className="tab-list" style={{ marginBottom: '10px', flexShrink: 0, paddingBottom: '4px' }}>
-            <button
-              onClick={() => setActiveTab('JUST_LAUNCHED')}
-              className={`tab-btn ${activeTab === 'JUST_LAUNCHED' ? 'active' : ''}`}
-              style={{ fontSize: '0.72rem', padding: '4px 10px', display: 'flex', alignItems: 'center', gap: '4px' }}
-            >
-              <Rocket size={12} /> Just Launched
-            </button>
-            <button
-              onClick={() => setActiveTab('TRENDING')}
-              className={`tab-btn ${activeTab === 'TRENDING' ? 'active' : ''}`}
-              style={{ fontSize: '0.72rem', padding: '4px 10px', display: 'flex', alignItems: 'center', gap: '4px' }}
-            >
-              <Flame size={12} /> Trending Mints
-            </button>
-            <button
-              onClick={() => setActiveTab('BONDED')}
-              className={`tab-btn ${activeTab === 'BONDED' ? 'active' : ''}`}
-              style={{ fontSize: '0.72rem', padding: '4px 10px', display: 'flex', alignItems: 'center', gap: '4px' }}
-            >
-              <ShieldCheck size={12} /> Bonded (DEXs)
-            </button>
-          </div>
 
           {/* TOKEN SCANNER MAIN CONTENT AREA */}
           <div style={{ flex: 1, overflowY: 'auto', paddingRight: '2px' }}>
