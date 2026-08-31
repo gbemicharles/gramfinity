@@ -2,13 +2,18 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { mockEngine } from '../utils/mockEngine';
 import { 
   Search, Flame, Rocket, Activity, ShieldCheck, TrendingUp, Cpu, 
-  MessageSquare, Twitter, Globe, Copy, Check, Filter, Zap, ExternalLink 
+  MessageSquare, Twitter, Globe, Copy, Check, Filter, Zap, ExternalLink,
+  Table, LayoutGrid, Maximize2, Minimize2, PanelRightClose, PanelRightOpen
 } from 'lucide-react';
 
 export default function Discover({ onSelectTokenForTrade }) {
   const [tokens, setTokens] = useState({});
   const [searchTerm, setSearchTerm] = useState('');
   
+  // Layout and View mode states
+  const [viewMode, setViewMode] = useState('table'); // 'table' | 'grid'
+  const [feedCollapsed, setFeedCollapsed] = useState(false);
+
   // Advanced filter states
   const [selectedCategory, setSelectedCategory] = useState('ALL'); // ALL, Meme, DeFi, Gaming
   const [timeframeFilter, setTimeframeFilter] = useState('ALL'); // ALL, NEW_5M
@@ -470,45 +475,82 @@ export default function Discover({ onSelectTokenForTrade }) {
       </div>
 
       {/* 2. SPLIT SCANNER WORKSPACE */}
-      <div className="scanner-split-container">
+      <div className={`scanner-split-container ${feedCollapsed ? 'feed-collapsed' : ''}`}>
         
-        {/* LEFT PANEL: Filters, Tabs, Cards Grid */}
+        {/* LEFT PANEL: Filters, Tabs, Table/Cards View */}
         <div className="scanner-left-panel">
           
-          {/* Stats Summaries banner row */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '12px', marginBottom: '16px', flexShrink: 0 }}>
-            <div className="glass-panel" style={{ padding: '12px', background: 'linear-gradient(135deg, rgba(12, 16, 23, 0.95), rgba(6, 9, 15, 0.95))', borderLeft: '3px solid var(--accent-cyan)' }}>
-              <h1 style={{ fontSize: '0.9rem', color: '#ffffff', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
-                <TrendingUp className="text-cyan animate-pulse" size={16} /> Launchpad Scanner
+          {/* Streamlined Compact Metrics & Control Header Ribbon */}
+          <div style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '12px',
+            marginBottom: '12px',
+            background: 'linear-gradient(135deg, rgba(12, 16, 23, 0.95), rgba(6, 9, 15, 0.95))',
+            border: '1px solid var(--border-color)',
+            borderLeft: '3px solid var(--accent-cyan)',
+            padding: '8px 14px',
+            borderRadius: '8px',
+            flexShrink: 0
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
+              <h1 style={{ fontSize: '0.9rem', color: '#ffffff', display: 'flex', alignItems: 'center', gap: '6px', margin: 0 }}>
+                <TrendingUp className="text-cyan animate-pulse" size={16} /> Token Scanner
               </h1>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.68rem', lineHeight: '1.3' }}>
-                Unified realtime tracking of new token listings on Gaspump, TonFun, TonRaffles and main DEXs.
-              </p>
-            </div>
-            
-            <div className="glass-panel" style={{ padding: '10px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-              <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Indexed Mints</span>
-              <div style={{ fontSize: '1.1rem', fontWeight: 700, fontFamily: 'var(--font-mono)', color: '#ffffff' }}>
-                {statsSummary.totalLaunches} <span style={{ fontSize: '0.65rem', color: 'var(--accent-green)', fontWeight: 500 }}>Active</span>
+              
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '0.7rem', fontFamily: 'var(--font-mono)' }}>
+                <span style={{ color: 'var(--text-muted)' }}>
+                  Active: <strong style={{ color: '#ffffff' }}>{statsSummary.totalLaunches}</strong>
+                </span>
+                <span style={{ color: 'var(--text-muted)' }}>
+                  24h Vol: <strong style={{ color: 'var(--accent-cyan)' }}>${statsSummary.totalVolume.toLocaleString(undefined, { maximumFractionDigits: 0 })}</strong>
+                </span>
+                {statsSummary.hotGainer && (
+                  <span style={{ color: 'var(--text-muted)' }}>
+                    Top Gainer: <strong style={{ color: 'var(--accent-green)' }}>${statsSummary.hotGainer.symbol} +{statsSummary.hotGainer.change24h}%</strong>
+                  </span>
+                )}
               </div>
             </div>
 
-            <div className="glass-panel" style={{ padding: '10px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-              <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>24H Volume</span>
-              <div style={{ fontSize: '1.1rem', fontWeight: 700, fontFamily: 'var(--font-mono)', color: 'var(--accent-cyan)' }}>
-                ${statsSummary.totalVolume.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+            {/* Layout View Mode Switcher & Expand Workspace Controls */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <div style={{ display: 'flex', gap: '2px', background: 'var(--bg-primary)', padding: '2px', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
+                <button
+                  type="button"
+                  title="High Density Table View"
+                  onClick={() => setViewMode('table')}
+                  className={`view-switcher-btn ${viewMode === 'table' ? 'active' : ''}`}
+                  style={{ border: 'none' }}
+                >
+                  <Table size={13} /> Table
+                </button>
+                <button
+                  type="button"
+                  title="Card Grid View"
+                  onClick={() => setViewMode('grid')}
+                  className={`view-switcher-btn ${viewMode === 'grid' ? 'active' : ''}`}
+                  style={{ border: 'none' }}
+                >
+                  <LayoutGrid size={13} /> Grid
+                </button>
               </div>
-            </div>
 
-            <div className="glass-panel" style={{ padding: '10px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-              <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Top Gainer</span>
-              <div style={{ fontSize: '1rem', fontWeight: 700, fontFamily: 'var(--font-mono)', color: 'var(--accent-green)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {statsSummary.hotGainer ? (
-                  <>
-                    ${statsSummary.hotGainer.symbol} <span style={{ fontSize: '0.65rem' }}>+{statsSummary.hotGainer.change24h}%</span>
-                  </>
-                ) : 'N/A'}
-              </div>
+              <button
+                type="button"
+                onClick={() => setFeedCollapsed(prev => !prev)}
+                className="view-switcher-btn"
+                title={feedCollapsed ? "Show Live Activity Feed" : "Collapse Feed (Full Width Workspace)"}
+                style={{
+                  borderColor: feedCollapsed ? 'var(--accent-cyan)' : 'var(--border-color)',
+                  color: feedCollapsed ? 'var(--accent-cyan)' : 'var(--text-secondary)'
+                }}
+              >
+                {feedCollapsed ? <PanelRightOpen size={13} /> : <PanelRightClose size={13} />}
+                {feedCollapsed ? 'Show Feed' : 'Full Width'}
+              </button>
             </div>
           </div>
 
@@ -516,31 +558,31 @@ export default function Discover({ onSelectTokenForTrade }) {
           <div style={{
             display: 'flex',
             flexWrap: 'wrap',
-            gap: '10px',
+            gap: '8px',
             alignItems: 'center',
-            marginBottom: '16px',
+            marginBottom: '12px',
             background: 'var(--bg-secondary)',
-            padding: '10px 14px',
+            padding: '8px 12px',
             borderRadius: '8px',
             border: '1px solid var(--border-color)',
             flexShrink: 0
           }}>
             {/* Search Box */}
-            <div style={{ position: 'relative', minWidth: '150px', flex: '1' }}>
+            <div style={{ position: 'relative', minWidth: '140px', flex: '1' }}>
               <input
                 type="text"
                 placeholder="Search symbol, CA..."
                 className="input-field"
-                style={{ paddingLeft: '28px', height: '28px', fontSize: '0.72rem', borderRadius: '6px' }}
+                style={{ paddingLeft: '28px', height: '26px', fontSize: '0.7rem', borderRadius: '6px' }}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
-              <Search size={12} style={{ position: 'absolute', left: '8px', top: '8px', color: 'var(--text-muted)' }} />
+              <Search size={11} style={{ position: 'absolute', left: '8px', top: '7px', color: 'var(--text-muted)' }} />
             </div>
 
             {/* Launchpad Select */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>Origin:</span>
+              <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Origin:</span>
               <select
                 value={selectedLaunchpad}
                 onChange={(e) => setSelectedLaunchpad(e.target.value)}
@@ -548,8 +590,8 @@ export default function Discover({ onSelectTokenForTrade }) {
                   background: 'var(--bg-primary)',
                   border: '1px solid var(--border-color)',
                   color: 'var(--text-primary)',
-                  fontSize: '0.7rem',
-                  padding: '3px 6px',
+                  fontSize: '0.68rem',
+                  padding: '2px 6px',
                   borderRadius: '6px',
                   outline: 'none',
                   cursor: 'pointer'
@@ -570,7 +612,7 @@ export default function Discover({ onSelectTokenForTrade }) {
 
             {/* Sort Select */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}><Filter size={11} style={{ display: 'inline', marginRight: '1px' }} /> Sort:</span>
+              <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}><Filter size={10} style={{ display: 'inline', marginRight: '1px' }} /> Sort:</span>
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
@@ -578,8 +620,8 @@ export default function Discover({ onSelectTokenForTrade }) {
                   background: 'var(--bg-primary)',
                   border: '1px solid var(--border-color)',
                   color: 'var(--text-primary)',
-                  fontSize: '0.7rem',
-                  padding: '3px 6px',
+                  fontSize: '0.68rem',
+                  padding: '2px 6px',
                   borderRadius: '6px',
                   outline: 'none',
                   cursor: 'pointer'
@@ -597,7 +639,7 @@ export default function Discover({ onSelectTokenForTrade }) {
 
             {/* Category selection */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>Cat:</span>
+              <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Cat:</span>
               <select
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
@@ -605,8 +647,8 @@ export default function Discover({ onSelectTokenForTrade }) {
                   background: 'var(--bg-primary)',
                   border: '1px solid var(--border-color)',
                   color: 'var(--text-primary)',
-                  fontSize: '0.7rem',
-                  padding: '3px 6px',
+                  fontSize: '0.68rem',
+                  padding: '2px 6px',
                   borderRadius: '6px',
                   outline: 'none',
                   cursor: 'pointer'
@@ -621,7 +663,7 @@ export default function Discover({ onSelectTokenForTrade }) {
 
             {/* Timeframe Radar Select */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>Radar:</span>
+              <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Radar:</span>
               <select
                 value={timeframeFilter}
                 onChange={(e) => setTimeframeFilter(e.target.value)}
@@ -629,8 +671,8 @@ export default function Discover({ onSelectTokenForTrade }) {
                   background: 'var(--bg-primary)',
                   border: '1px solid var(--border-color)',
                   color: 'var(--text-primary)',
-                  fontSize: '0.7rem',
-                  padding: '3px 6px',
+                  fontSize: '0.68rem',
+                  padding: '2px 6px',
                   borderRadius: '6px',
                   outline: 'none',
                   cursor: 'pointer'
@@ -645,7 +687,7 @@ export default function Discover({ onSelectTokenForTrade }) {
             </div>
 
             {/* Verified toggle */}
-            <label style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '0.7rem', color: 'var(--text-primary)', cursor: 'pointer', border: '1px solid var(--border-color)', padding: '3px 6px', borderRadius: '6px', background: 'var(--bg-primary)' }}>
+            <label style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.68rem', color: 'var(--text-primary)', cursor: 'pointer', border: '1px solid var(--border-color)', padding: '2px 6px', borderRadius: '6px', background: 'var(--bg-primary)' }}>
               <input
                 type="checkbox"
                 checked={verifiedOnly}
@@ -660,9 +702,9 @@ export default function Discover({ onSelectTokenForTrade }) {
               onClick={() => setShowAdvancedFilters(prev => !prev)}
               className="btn btn-secondary"
               style={{
-                height: '28px',
-                padding: '0 10px',
-                fontSize: '0.7rem',
+                height: '24px',
+                padding: '0 8px',
+                fontSize: '0.68rem',
                 borderColor: showAdvancedFilters ? 'var(--accent-cyan)' : 'var(--border-color)',
                 color: showAdvancedFilters ? 'var(--accent-cyan)' : 'var(--text-secondary)',
                 display: 'flex',
@@ -671,7 +713,7 @@ export default function Discover({ onSelectTokenForTrade }) {
                 cursor: 'pointer'
               }}
             >
-              <Filter size={11} /> {showAdvancedFilters ? 'Hide DEX Filters' : 'DEX Filters'}
+              <Filter size={10} /> {showAdvancedFilters ? 'Hide DEX Filters' : 'DEX Filters'}
             </button>
           </div>
 
@@ -679,34 +721,34 @@ export default function Discover({ onSelectTokenForTrade }) {
           {showAdvancedFilters && (
             <div style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
-              gap: '12px',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+              gap: '10px',
               background: 'var(--bg-secondary)',
               border: '1px solid var(--border-color)',
               borderRadius: '8px',
-              padding: '14px',
-              marginBottom: '16px',
+              padding: '12px',
+              marginBottom: '12px',
               animation: 'slideIn 0.25s ease-out forwards',
               flexShrink: 0
             }}>
               {/* Market Cap Min/Max */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <span style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Market Cap ($)</span>
+                <span style={{ fontSize: '0.62rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Market Cap ($)</span>
                 <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
                   <input
                     type="number"
                     placeholder="Min"
                     className="input-field"
-                    style={{ height: '26px', padding: '4px 6px', fontSize: '0.7rem' }}
+                    style={{ height: '24px', padding: '2px 6px', fontSize: '0.68rem' }}
                     value={minMcap}
                     onChange={(e) => setMinMcap(e.target.value)}
                   />
-                  <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>to</span>
+                  <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>to</span>
                   <input
                     type="number"
                     placeholder="Max"
                     className="input-field"
-                    style={{ height: '26px', padding: '4px 6px', fontSize: '0.7rem' }}
+                    style={{ height: '24px', padding: '2px 6px', fontSize: '0.68rem' }}
                     value={maxMcap}
                     onChange={(e) => setMaxMcap(e.target.value)}
                   />
@@ -715,22 +757,22 @@ export default function Discover({ onSelectTokenForTrade }) {
 
               {/* Volume 24h Min/Max */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <span style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', fontWeight: 600 }}>24h Volume ($)</span>
+                <span style={{ fontSize: '0.62rem', color: 'var(--text-secondary)', fontWeight: 600 }}>24h Volume ($)</span>
                 <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
                   <input
                     type="number"
                     placeholder="Min"
                     className="input-field"
-                    style={{ height: '26px', padding: '4px 6px', fontSize: '0.7rem' }}
+                    style={{ height: '24px', padding: '2px 6px', fontSize: '0.68rem' }}
                     value={minVolume}
                     onChange={(e) => setMinVolume(e.target.value)}
                   />
-                  <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>to</span>
+                  <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>to</span>
                   <input
                     type="number"
                     placeholder="Max"
                     className="input-field"
-                    style={{ height: '26px', padding: '4px 6px', fontSize: '0.7rem' }}
+                    style={{ height: '24px', padding: '2px 6px', fontSize: '0.68rem' }}
                     value={maxVolume}
                     onChange={(e) => setMaxVolume(e.target.value)}
                   />
@@ -739,22 +781,22 @@ export default function Discover({ onSelectTokenForTrade }) {
 
               {/* Liquidity Min/Max */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <span style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Liquidity ($)</span>
+                <span style={{ fontSize: '0.62rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Liquidity ($)</span>
                 <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
                   <input
                     type="number"
                     placeholder="Min"
                     className="input-field"
-                    style={{ height: '26px', padding: '4px 6px', fontSize: '0.7rem' }}
+                    style={{ height: '24px', padding: '2px 6px', fontSize: '0.68rem' }}
                     value={minLiquidity}
                     onChange={(e) => setMinLiquidity(e.target.value)}
                   />
-                  <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>to</span>
+                  <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>to</span>
                   <input
                     type="number"
                     placeholder="Max"
                     className="input-field"
-                    style={{ height: '26px', padding: '4px 6px', fontSize: '0.7rem' }}
+                    style={{ height: '24px', padding: '2px 6px', fontSize: '0.68rem' }}
                     value={maxLiquidity}
                     onChange={(e) => setMaxLiquidity(e.target.value)}
                   />
@@ -763,22 +805,22 @@ export default function Discover({ onSelectTokenForTrade }) {
 
               {/* Holders Min/Max */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <span style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Holders Count</span>
+                <span style={{ fontSize: '0.62rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Holders Count</span>
                 <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
                   <input
                     type="number"
                     placeholder="Min"
                     className="input-field"
-                    style={{ height: '26px', padding: '4px 6px', fontSize: '0.7rem' }}
+                    style={{ height: '24px', padding: '2px 6px', fontSize: '0.68rem' }}
                     value={minHolders}
                     onChange={(e) => setMinHolders(e.target.value)}
                   />
-                  <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>to</span>
+                  <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>to</span>
                   <input
                     type="number"
                     placeholder="Max"
                     className="input-field"
-                    style={{ height: '26px', padding: '4px 6px', fontSize: '0.7rem' }}
+                    style={{ height: '24px', padding: '2px 6px', fontSize: '0.68rem' }}
                     value={maxHolders}
                     onChange={(e) => setMaxHolders(e.target.value)}
                   />
@@ -787,22 +829,22 @@ export default function Discover({ onSelectTokenForTrade }) {
 
               {/* Rug Score Min/Max */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <span style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Rug Score (0 - 100)</span>
+                <span style={{ fontSize: '0.62rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Rug Score (0 - 100)</span>
                 <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
                   <input
                     type="number"
                     placeholder="Min"
                     className="input-field"
-                    style={{ height: '26px', padding: '4px 6px', fontSize: '0.7rem' }}
+                    style={{ height: '24px', padding: '2px 6px', fontSize: '0.68rem' }}
                     value={minRugScore}
                     onChange={(e) => setMinRugScore(e.target.value)}
                   />
-                  <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>to</span>
+                  <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>to</span>
                   <input
                     type="number"
                     placeholder="Max"
                     className="input-field"
-                    style={{ height: '26px', padding: '4px 6px', fontSize: '0.7rem' }}
+                    style={{ height: '24px', padding: '2px 6px', fontSize: '0.68rem' }}
                     value={maxRugScore}
                     onChange={(e) => setMaxRugScore(e.target.value)}
                   />
@@ -814,7 +856,7 @@ export default function Discover({ onSelectTokenForTrade }) {
                 <button
                   type="button"
                   className="btn btn-secondary"
-                  style={{ width: '100%', height: '26px', fontSize: '0.68rem', padding: '0', cursor: 'pointer' }}
+                  style={{ width: '100%', height: '24px', fontSize: '0.65rem', padding: '0', cursor: 'pointer' }}
                   onClick={() => {
                     setMinMcap('');
                     setMaxMcap('');
@@ -835,48 +877,259 @@ export default function Discover({ onSelectTokenForTrade }) {
           )}
 
           {/* Primary Scanner Categorization Tabs */}
-          <div className="tab-list" style={{ marginBottom: '14px', flexShrink: 0 }}>
+          <div className="tab-list" style={{ marginBottom: '10px', flexShrink: 0, paddingBottom: '4px' }}>
             <button
               onClick={() => setActiveTab('JUST_LAUNCHED')}
               className={`tab-btn ${activeTab === 'JUST_LAUNCHED' ? 'active' : ''}`}
-              style={{ fontSize: '0.75rem', padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '4px' }}
+              style={{ fontSize: '0.72rem', padding: '4px 10px', display: 'flex', alignItems: 'center', gap: '4px' }}
             >
-              <Rocket size={13} /> Just Launched
+              <Rocket size={12} /> Just Launched
             </button>
             <button
               onClick={() => setActiveTab('TRENDING')}
               className={`tab-btn ${activeTab === 'TRENDING' ? 'active' : ''}`}
-              style={{ fontSize: '0.75rem', padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '4px' }}
+              style={{ fontSize: '0.72rem', padding: '4px 10px', display: 'flex', alignItems: 'center', gap: '4px' }}
             >
-              <Flame size={13} /> Trending Mints
+              <Flame size={12} /> Trending Mints
             </button>
             <button
               onClick={() => setActiveTab('BONDED')}
               className={`tab-btn ${activeTab === 'BONDED' ? 'active' : ''}`}
-              style={{ fontSize: '0.75rem', padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '4px' }}
+              style={{ fontSize: '0.72rem', padding: '4px 10px', display: 'flex', alignItems: 'center', gap: '4px' }}
             >
-              <ShieldCheck size={13} /> Bonded (DEXs)
+              <ShieldCheck size={12} /> Bonded (DEXs)
             </button>
           </div>
 
-          {/* Meme Coins Cards Grid */}
-          <div style={{ flex: 1, overflowY: 'auto', paddingRight: '4px' }}>
+          {/* TOKEN SCANNER MAIN CONTENT AREA */}
+          <div style={{ flex: 1, overflowY: 'auto', paddingRight: '2px' }}>
             {filteredTokens.length === 0 ? (
               <div className="glass-panel" style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--text-muted)' }}>
                 No active launchpad contracts found matching your filters.
               </div>
+            ) : viewMode === 'table' ? (
+              /* High Density DexScreener-style Table View */
+              <div className="scanner-table-wrapper">
+                <table className="scanner-table">
+                  <thead>
+                    <tr>
+                      <th style={{ width: '40px' }}>#</th>
+                      <th>Token</th>
+                      <th>Origin</th>
+                      <th>Age / Radar</th>
+                      <th style={{ textAlign: 'right' }}>Price</th>
+                      <th style={{ textAlign: 'right' }}>24h Vol</th>
+                      <th style={{ textAlign: 'right' }}>Market Cap</th>
+                      <th style={{ textAlign: 'right' }}>Holders</th>
+                      <th style={{ width: '130px' }}>Bonding %</th>
+                      <th style={{ textAlign: 'center' }}>Rug Score</th>
+                      <th style={{ textAlign: 'center', width: '150px' }}>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredTokens.map((token, index) => {
+                      const flash = flashStates[token.symbol];
+                      const flashBg = flash ? (flash.type === 'up' ? 'rgba(0, 255, 135, 0.08)' : 'rgba(239, 68, 68, 0.08)') : 'transparent';
+                      
+                      return (
+                        <tr 
+                          key={token.symbol}
+                          onClick={() => setSelectedDetailsToken(token)}
+                          style={{ cursor: 'pointer', background: flashBg }}
+                        >
+                          {/* Index */}
+                          <td style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', fontSize: '0.68rem' }}>
+                            {index + 1}
+                          </td>
+
+                          {/* Token Name & CA */}
+                          <td>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <div style={{
+                                width: '28px',
+                                height: '28px',
+                                borderRadius: '50%',
+                                background: token.logoBg || 'linear-gradient(135deg, #1e293b, #0f172a)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontWeight: 700,
+                                fontSize: '0.75rem',
+                                color: '#ffffff',
+                                border: '1px solid var(--border-color)',
+                                flexShrink: 0
+                              }}>
+                                {token.symbol.charAt(0)}
+                              </div>
+                              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                  <span style={{ fontWeight: 700, color: '#ffffff', fontSize: '0.78rem' }}>
+                                    {token.name}
+                                  </span>
+                                  <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
+                                    ${token.symbol}
+                                  </span>
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.6rem', color: 'var(--text-muted)' }}>
+                                  <span>CA: {token.address.slice(0, 4)}...{token.address.slice(-4)}</span>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => { e.stopPropagation(); copyToClipboard(token.address, 'Contract Address'); }}
+                                    style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 0 }}
+                                    className="hover:text-cyan"
+                                  >
+                                    {copiedAddress === token.address ? <Check size={10} className="text-green" /> : <Copy size={10} />}
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+
+                          {/* Origin Badge */}
+                          <td>
+                            <span 
+                              className="tag"
+                              style={{
+                                fontSize: '0.58rem',
+                                padding: '1px 5px',
+                                borderRadius: '4px',
+                                background: 
+                                  token.launchpad === 'Gaspump' ? 'rgba(245, 158, 11, 0.12)' :
+                                  token.launchpad === 'Blum Launch' ? 'rgba(16, 185, 129, 0.12)' :
+                                  token.launchpad === 'PocketFi' ? 'rgba(167, 139, 250, 0.12)' :
+                                  token.launchpad === 'TopBlast.lol' ? 'rgba(234, 179, 8, 0.12)' :
+                                  token.launchpad === 'sTONks' ? 'rgba(59, 130, 246, 0.12)' :
+                                  token.launchpad === 'Uranus' ? 'rgba(236, 72, 153, 0.12)' :
+                                  token.launchpad?.includes('STON.fi') ? 'rgba(6, 182, 212, 0.12)' : 'rgba(236, 72, 153, 0.12)',
+                                color: 
+                                  token.launchpad === 'Gaspump' ? '#f59e0b' :
+                                  token.launchpad === 'Blum Launch' ? '#10b981' :
+                                  token.launchpad === 'PocketFi' ? '#a78bfa' :
+                                  token.launchpad === 'TopBlast.lol' ? '#eab308' :
+                                  token.launchpad === 'sTONks' ? '#3b82f6' :
+                                  token.launchpad === 'Uranus' ? '#ec4899' :
+                                  token.launchpad?.includes('STON.fi') ? '#22d3ee' : '#f472b6',
+                                border: '1px solid currentColor'
+                              }}
+                            >
+                              {token.launchpad}
+                            </span>
+                          </td>
+
+                          {/* Age & Radar */}
+                          <td style={{ fontSize: '0.68rem' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                              <span style={{ color: '#ffffff', fontWeight: 500 }}>
+                                {Math.floor((Date.now() - token.launchTime) / (60 * 1000)) <= 0 ? 'Just now' : `${Math.floor((Date.now() - token.launchTime) / (60 * 1000))}m ago`}
+                              </span>
+                              <span style={{ fontSize: '0.58rem', color: 'var(--accent-cyan)' }}>{token.lifecycle}</span>
+                            </div>
+                          </td>
+
+                          {/* Price & 24h Change */}
+                          <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                              <span style={{ color: token.change24h >= 0 ? 'var(--color-buy)' : 'var(--color-sell)', fontWeight: 600, fontSize: '0.75rem' }}>
+                                ${token.price.toLocaleString(undefined, { minimumFractionDigits: token.price < 0.01 ? 6 : 4, maximumFractionDigits: token.price < 0.01 ? 6 : 4 })}
+                              </span>
+                              <span style={{ fontSize: '0.58rem', color: token.change24h >= 0 ? 'var(--color-buy)' : 'var(--color-sell)' }}>
+                                {token.change24h >= 0 ? '+' : ''}{token.change24h}%
+                              </span>
+                            </div>
+                          </td>
+
+                          {/* 24h Volume */}
+                          <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)' }}>
+                            ${(token.volume24h || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                          </td>
+
+                          {/* Market Cap */}
+                          <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', fontWeight: 600, color: '#ffffff' }}>
+                            ${token.mcap.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                          </td>
+
+                          {/* Holders */}
+                          <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', fontSize: '0.68rem' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                              <span style={{ color: '#ffffff' }}>{token.holders}</span>
+                              <span style={{ fontSize: '0.55rem', color: 'var(--accent-green)' }}>
+                                {token.holdersGrowth >= 0 ? '+' : ''}{token.holdersGrowth}%
+                              </span>
+                            </div>
+                          </td>
+
+                          {/* Bonding % */}
+                          <td>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.6rem', fontFamily: 'var(--font-mono)' }}>
+                                <span style={{ color: token.isDex ? 'var(--accent-green)' : 'var(--accent-cyan)', fontWeight: 600 }}>
+                                  {token.isDex ? '100% DEX' : `${token.bondingProgress.toFixed(1)}%`}
+                                </span>
+                              </div>
+                              <div style={{ height: '4px', background: 'var(--bg-primary)', borderRadius: '2px', overflow: 'hidden' }}>
+                                <div style={{
+                                  width: `${token.bondingProgress}%`,
+                                  height: '100%',
+                                  background: token.isDex ? 'linear-gradient(90deg, #00ff87, #10b981)' : 'linear-gradient(90deg, #00e5ff, #00a8ff)',
+                                  borderRadius: '2px'
+                                }} />
+                              </div>
+                            </div>
+                          </td>
+
+                          {/* Rug Risk Score */}
+                          <td style={{ textAlign: 'center' }}>
+                            <span style={{
+                              fontSize: '0.6rem',
+                              padding: '2px 6px',
+                              borderRadius: '4px',
+                              fontWeight: 600,
+                              background: (token.security?.rugScore || 15) > 50 ? 'rgba(239, 68, 68, 0.12)' : 'rgba(16, 185, 129, 0.12)',
+                              color: (token.security?.rugScore || 15) > 50 ? 'var(--color-sell)' : 'var(--color-buy)',
+                              border: '1px solid currentColor'
+                            }}>
+                              {(token.security?.rugScore || 15) > 50 ? `High (${token.security?.rugScore || 65})` : `Low (${token.security?.rugScore || 15})`}
+                            </span>
+                          </td>
+
+                          {/* Quick Actions */}
+                          <td style={{ textAlign: 'center' }}>
+                            <div style={{ display: 'flex', gap: '4px', justifyContent: 'center' }}>
+                              <button
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); onSelectTokenForTrade(token.symbol); }}
+                                className="btn ape-in-btn"
+                                style={{ padding: '3px 8px', fontSize: '0.68rem', borderRadius: '4px', height: '24px' }}
+                              >
+                                <Zap size={11} fill="currentColor" /> APE IN
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); setSelectedDetailsToken(token); }}
+                                className="btn btn-secondary"
+                                style={{ padding: '3px 6px', fontSize: '0.65rem', borderRadius: '4px', height: '24px' }}
+                              >
+                                Info
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             ) : (
+              /* Compact Cards Grid View */
               <div style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
-                gap: '14px',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
+                gap: '12px',
                 paddingBottom: '16px'
               }}>
                 {filteredTokens.map(token => {
                   const buyPct = Math.round(token.buySellRatio * 100);
                   const sellPct = 100 - buyPct;
-                  
-                  // Handle price flashing CSS border class
                   const flash = flashStates[token.symbol];
                   const flashClass = flash ? (flash.type === 'up' ? 'flash-green' : 'flash-red') : '';
 
@@ -885,40 +1138,39 @@ export default function Discover({ onSelectTokenForTrade }) {
                       key={token.symbol} 
                       className={`meme-card ${flashClass}`}
                       style={{
-                        padding: '14px',
+                        padding: '12px',
                         display: 'flex',
                         flexDirection: 'column',
-                        gap: '12px',
+                        gap: '10px',
                         cursor: 'pointer'
                       }}
                       onClick={() => setSelectedDetailsToken(token)}
                     >
-                      {/* Avatar / Token Identity / Badge Row */}
+                      {/* Avatar / Identity */}
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                           <div style={{
-                            width: '38px',
-                            height: '38px',
+                            width: '34px',
+                            height: '34px',
                             borderRadius: '50%',
                             background: token.logoBg || 'linear-gradient(135deg, #1e293b, #0f172a)',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
                             fontWeight: 800,
-                            fontSize: '0.95rem',
+                            fontSize: '0.85rem',
                             color: '#ffffff',
                             border: '1.5px solid var(--border-color)',
-                            boxShadow: 'inset 0 0 10px rgba(255,255,255,0.05)',
                             flexShrink: 0
                           }}>
                             {token.symbol.charAt(0)}
                           </div>
                           
                           <div style={{ display: 'flex', flexDirection: 'column' }}>
-                            <span style={{ fontWeight: 700, color: '#ffffff', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <span style={{ fontWeight: 700, color: '#ffffff', fontSize: '0.82rem' }}>
                               {token.name}
                             </span>
-                            <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
+                            <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
                               ${token.symbol}
                             </span>
                           </div>
@@ -928,8 +1180,8 @@ export default function Discover({ onSelectTokenForTrade }) {
                         <span 
                           className="tag"
                           style={{
-                            fontSize: '0.6rem',
-                            padding: '2px 6px',
+                            fontSize: '0.58rem',
+                            padding: '1px 5px',
                             borderRadius: '4px',
                             background: 
                               token.launchpad === 'Gaspump' ? 'rgba(245, 158, 11, 0.12)' :
@@ -954,190 +1206,66 @@ export default function Discover({ onSelectTokenForTrade }) {
                         </span>
                       </div>
 
-                      {/* Radar statistics (Age, stage, smart money entered) */}
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255, 255, 255, 0.02)', padding: '6px 8px', borderRadius: '6px', fontSize: '0.68rem' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column' }}>
-                          <span style={{ fontSize: '0.55rem', color: 'var(--text-muted)' }}>AGE / STAGE</span>
-                          <span style={{ fontWeight: 600, color: '#ffffff' }}>
-                            {Math.floor((Date.now() - token.launchTime) / (60 * 1000)) <= 0 ? 'Just launched' : `${Math.floor((Date.now() - token.launchTime) / (60 * 1000))}m ago`} • <span style={{ color: 'var(--accent-cyan)' }}>{token.lifecycle}</span>
-                          </span>
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                          <span style={{ fontSize: '0.55rem', color: 'var(--text-muted)' }}>SMART WALLETS</span>
-                          <span style={{ fontWeight: 600, color: 'var(--accent-green)' }}>
-                            {(mockEngine.tokenSmartMoneyEntries[token.symbol] || []).length || 1} entered
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* "Why is this trending?" narrative explanation */}
-                      {token.whyTrending && (
-                        <div style={{ background: 'rgba(0, 229, 255, 0.03)', border: '1px dashed rgba(0, 229, 255, 0.15)', borderRadius: '6px', padding: '6px 8px', fontSize: '0.65rem', color: 'var(--text-secondary)', lineHeight: '1.3' }}>
-                          <span style={{ color: 'var(--accent-cyan)', fontWeight: 600 }}>💡 Why Trending:</span> {token.whyTrending}
-                        </div>
-                      )}
-
-                      {/* Contract & Social Row */}
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); copyToClipboard(token.address, 'Contract Address'); }}
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                            background: 'rgba(255,255,255,0.03)',
-                            border: '1px solid var(--border-color)',
-                            color: 'var(--text-secondary)',
-                            cursor: 'pointer',
-                            fontSize: '0.62rem',
-                            fontFamily: 'var(--font-mono)',
-                            padding: '2px 6px',
-                            borderRadius: '4px'
-                          }}
-                          className="hover:text-cyan hover:border-cyan"
-                        >
-                          <span>CA: {token.address.slice(0, 4)}...{token.address.slice(-4)}</span>
-                          {copiedAddress === token.address ? <Check size={10} className="text-green" /> : <Copy size={10} />}
-                        </button>
-
-                        <div style={{ display: 'flex', gap: '6px' }}>
-                          <a
-                            href={token.socialLinks?.telegram || '#'}
-                            target="_blank"
-                            rel="noreferrer"
-                            onClick={(e) => { e.stopPropagation(); if (token.socialLinks?.telegram.includes('mock')) { e.preventDefault(); mockEngine.triggerToast(`Opening mock Telegram chat for $${token.symbol}`, 'info'); } }}
-                            style={{ color: 'var(--text-muted)', background: 'rgba(255,255,255,0.02)', padding: '3px', borderRadius: '4px', border: '1px solid var(--border-color)' }}
-                            className="hover:text-cyan"
-                          >
-                            <MessageSquare size={11} />
-                          </a>
-                          <a
-                            href={token.socialLinks?.x || '#'}
-                            target="_blank"
-                            rel="noreferrer"
-                            onClick={(e) => { e.stopPropagation(); if (token.socialLinks?.x.includes('mock')) { e.preventDefault(); mockEngine.triggerToast(`Opening mock X account for $${token.symbol}`, 'info'); } }}
-                            style={{ color: 'var(--text-muted)', background: 'rgba(255,255,255,0.02)', padding: '3px', borderRadius: '4px', border: '1px solid var(--border-color)' }}
-                            className="hover:text-cyan"
-                          >
-                            <Twitter size={11} />
-                          </a>
-                          <a
-                            href={token.socialLinks?.website || '#'}
-                            target="_blank"
-                            rel="noreferrer"
-                            onClick={(e) => { e.stopPropagation(); if (token.socialLinks?.website.includes('mock')) { e.preventDefault(); mockEngine.triggerToast(`Opening mock website for $${token.symbol}`, 'info'); } }}
-                            style={{ color: 'var(--text-muted)', background: 'rgba(255,255,255,0.02)', padding: '3px', borderRadius: '4px', border: '1px solid var(--border-color)' }}
-                            className="hover:text-cyan"
-                          >
-                            <Globe size={11} />
-                          </a>
-                        </div>
-                      </div>
-
-                      {/* Bonding Curve Progress Bar */}
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.02)', padding: '8px', borderRadius: '6px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem' }}>
-                          <span style={{ color: 'var(--text-secondary)' }}>
-                            {token.isDex ? 'Status:' : 'Bonding progress:'}
-                          </span>
-                          <span style={{ fontWeight: 600, color: token.isDex ? 'var(--accent-green)' : 'var(--accent-cyan)', fontFamily: 'var(--font-mono)' }}>
-                            {token.isDex ? '100% Bonded • DEX' : `${token.bondingProgress.toFixed(1)}%`}
-                          </span>
-                        </div>
-                        
-                        <div style={{
-                          height: '6px',
-                          background: 'var(--bg-primary)',
-                          borderRadius: '4px',
-                          overflow: 'hidden',
-                          position: 'relative'
-                        }} className="progress-glow">
-                          <div style={{
-                            width: `${token.bondingProgress}%`,
-                            height: '100%',
-                            background: token.isDex 
-                              ? 'linear-gradient(90deg, #00ff87, #10b981)' 
-                              : 'linear-gradient(90deg, #00e5ff, #00a8ff)',
-                            borderRadius: '4px',
-                            transition: 'width 0.4s ease-out'
-                          }} />
-                        </div>
-                        {!token.isDex && (
-                          <div style={{ fontSize: '0.55rem', color: 'var(--text-muted)', textAlign: 'right' }}>
-                            Target MCAP: $100,000 for DEX Pool
-                          </div>
-                        )}
-                      </div>
-
                       {/* Key Stats Grid */}
                       <div style={{
                         display: 'grid',
                         gridTemplateColumns: '1fr 1fr',
-                        gap: '6px',
+                        gap: '4px',
                         background: 'rgba(0,0,0,0.2)',
-                        padding: '8px',
+                        padding: '6px 8px',
                         borderRadius: '6px',
-                        fontSize: '0.68rem',
+                        fontSize: '0.65rem',
                         fontFamily: 'var(--font-mono)'
                       }}>
                         <div style={{ display: 'flex', flexDirection: 'column' }}>
-                          <span style={{ color: 'var(--text-muted)', fontSize: '0.58rem', textTransform: 'uppercase' }}>Price</span>
+                          <span style={{ color: 'var(--text-muted)', fontSize: '0.55rem' }}>PRICE</span>
                           <span style={{ color: token.change24h >= 0 ? 'var(--color-buy)' : 'var(--color-sell)', fontWeight: 600 }}>
                             ${token.price.toLocaleString(undefined, { minimumFractionDigits: token.price < 0.01 ? 6 : 4, maximumFractionDigits: token.price < 0.01 ? 6 : 4 })}
                           </span>
                         </div>
 
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                          <span style={{ color: 'var(--text-muted)', fontSize: '0.58rem', textTransform: 'uppercase' }}>Market Cap</span>
+                          <span style={{ color: 'var(--text-muted)', fontSize: '0.55rem' }}>MCAP</span>
                           <span style={{ color: '#ffffff', fontWeight: 600 }}>
                             ${token.mcap.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                           </span>
                         </div>
-
-                        <div style={{ display: 'flex', flexDirection: 'column', marginTop: '4px' }}>
-                          <span style={{ color: 'var(--text-muted)', fontSize: '0.58rem', textTransform: 'uppercase' }}>24H Vol</span>
-                          <span style={{ color: 'var(--text-secondary)' }}>
-                            ${(token.volume24h || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                          </span>
-                        </div>
-
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', marginTop: '4px' }}>
-                          <span style={{ color: 'var(--text-muted)', fontSize: '0.58rem', textTransform: 'uppercase' }}>Holders / growth</span>
-                          <span style={{ color: 'var(--text-secondary)' }}>
-                            {token.holders} ({token.holdersGrowth >= 0 ? '+' : ''}{token.holdersGrowth}%)
-                          </span>
-                        </div>
                       </div>
 
-                      {/* Buy / Sell Pressure Indicator Bar */}
+                      {/* Bonding Curve Progress */}
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.6rem', color: 'var(--text-muted)' }}>
-                          <span style={{ color: 'var(--color-buy)', fontWeight: 500 }}>Buys: {buyPct}%</span>
-                          <span style={{ color: 'var(--color-sell)', fontWeight: 500 }}>Sells: {sellPct}%</span>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.6rem' }}>
+                          <span style={{ color: 'var(--text-muted)' }}>Bonding:</span>
+                          <span style={{ fontWeight: 600, color: token.isDex ? 'var(--accent-green)' : 'var(--accent-cyan)', fontFamily: 'var(--font-mono)' }}>
+                            {token.isDex ? '100% DEX' : `${token.bondingProgress.toFixed(1)}%`}
+                          </span>
                         </div>
-                        <div style={{ display: 'flex', height: '4px', borderRadius: '2px', overflow: 'hidden' }}>
-                          <div style={{ width: `${buyPct}%`, background: 'var(--color-buy)' }} />
-                          <div style={{ width: `${sellPct}%`, background: 'var(--color-sell)' }} />
+                        <div style={{ height: '4px', background: 'var(--bg-primary)', borderRadius: '2px', overflow: 'hidden' }}>
+                          <div style={{
+                            width: `${token.bondingProgress}%`,
+                            height: '100%',
+                            background: token.isDex ? 'linear-gradient(90deg, #00ff87, #10b981)' : 'linear-gradient(90deg, #00e5ff, #00a8ff)',
+                            borderRadius: '2px'
+                          }} />
                         </div>
                       </div>
 
-                      {/* Prominent Neon APE IN Button */}
+                      {/* Prominent APE IN Button */}
                       <button
                         onClick={(e) => { e.stopPropagation(); onSelectTokenForTrade(token.symbol); }}
                         className="btn ape-in-btn"
                         style={{
                           width: '100%',
-                          padding: '6px 0',
-                          fontSize: '0.78rem',
-                          borderRadius: '8px',
+                          padding: '5px 0',
+                          fontSize: '0.72rem',
+                          borderRadius: '6px',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          gap: '6px',
-                          marginTop: '4px'
+                          gap: '4px'
                         }}
                       >
-                        <Zap size={13} fill="currentColor" /> APE IN
+                        <Zap size={12} fill="currentColor" /> APE IN
                       </button>
                     </div>
                   );

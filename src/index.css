@@ -665,24 +665,109 @@ h1, h2, h3, h4, h5, h6 {
   flex: 1;
   overflow: hidden;
   height: 100%;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .scanner-left-panel {
-  flex: 8;
+  flex: 8.5;
   display: flex;
   flex-direction: column;
   overflow-y: auto;
   border-right: 1px solid var(--border-color);
-  padding: 16px;
+  padding: 14px;
+  transition: flex 0.3s ease;
 }
 
 .scanner-right-panel {
-  flex: 4;
+  flex: 3.5;
   display: flex;
   flex-direction: column;
   background: var(--bg-secondary);
   overflow: hidden;
-  padding: 16px;
+  padding: 14px;
+  transition: all 0.3s ease;
+}
+
+.scanner-split-container.feed-collapsed .scanner-left-panel {
+  flex: 12;
+  border-right: none;
+}
+
+.scanner-split-container.feed-collapsed .scanner-right-panel {
+  display: none;
+}
+
+/* Scanner High Density Table View */
+.scanner-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: var(--shadow-sm);
+}
+
+.scanner-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+.scanner-table th {
+  position: sticky;
+  top: 0;
+  background: #080c14;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border-color);
+  z-index: 10;
+}
+
+.scanner-table td {
+  padding: 7px 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  vertical-align: middle;
+}
+
+.scanner-table tr {
+  transition: background 0.15s ease;
+}
+
+.scanner-table tr:hover {
+  background: rgba(0, 229, 255, 0.04);
+}
+
+.view-switcher-btn {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.2s ease;
+}
+
+.view-switcher-btn:hover {
+  border-color: var(--text-muted);
+  color: var(--text-primary);
+}
+
+.view-switcher-btn.active {
+  background: rgba(0, 229, 255, 0.12);
+  border-color: var(--accent-cyan);
+  color: var(--accent-cyan);
+  font-weight: 600;
 }
 
 @media (max-width: 900px) {
@@ -703,5 +788,6 @@ h1, h2, h3, h4, h5, h6 {
     overflow: hidden;
   }
 }
+
 
 
