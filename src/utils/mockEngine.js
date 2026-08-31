@@ -850,6 +850,48 @@ class MockEngine {
         // Silence API fetch errors (backend may not be running in dev)
       }
 
+      // 7. Fetch bonded tokens from backend Postgres DB (platform tokens that hit 100% bonding)
+      try {
+        const apiBase = window.location.hostname === 'localhost' ? 'http://localhost:4000' : '';
+        const bondedRes = await fetch(`${apiBase}/api/bonded`);
+        if (bondedRes.ok) {
+          const bondedTokens = await bondedRes.json();
+          bondedTokens.forEach(token => {
+            mainnetTokens[token.symbol] = {
+              symbol: token.symbol,
+              name: token.name,
+              address: token.address,
+              image: token.image || '',
+              price: parseFloat(token.price) || 0,
+              change1h: 0,
+              change24h: parseFloat(token.change24h) || 0,
+              volume24h: parseFloat(token.volume24h) || 0,
+              volume1h: parseFloat(token.volume24h) / 24 || 0,
+              volume5m: parseFloat(token.volume24h) / 288 || 0,
+              buySellRatio: 0.6,
+              holdersGrowth: 0,
+              initialLiquidity: parseFloat(token.liquidity) * 0.8 || 0,
+              devWallet: 'EQ_bonded_' + token.symbol,
+              launchTime: new Date(token.graduated_at).getTime(),
+              category: 'Meme',
+              logoBg: 'linear-gradient(135deg, #14532d, #052e16)',
+              socialLinks: { telegram: '', x: '', website: '' },
+              liquidity: parseFloat(token.liquidity) || 0,
+              supply: parseFloat(token.supply) || 0,
+              holders: parseInt(token.holders) || 0,
+              security: { rugScore: 5, rugRisk: 'Low Risk', verified: true, renounced: true, lockedLiquidity: 100 },
+              decimals: 9,
+              launchpad: token.launchpad,
+              isPlatformLaunchpadToken: true,
+              bondingProgress: 100,
+              isDex: true
+            };
+          });
+          console.log(`✅ Loaded ${bondedTokens.length} bonded tokens from backend DB.`);
+        }
+      } catch (err) {
+        // Silence API fetch errors (backend may not be running in dev)
+      }
 
       // Merge into existing tokens in-place (never wipe the list between fetches)
       Object.assign(this.tokens, mainnetTokens);

@@ -34,7 +34,7 @@ if (process.env.DATABASE_URL) {
   // Automatically initialize database schema tables
   const initDb = async () => {
     try {
-      // Create tokens table
+      // Create tokens table (platform launchpad tokens being built)
       await pgPool.query(`
         CREATE TABLE IF NOT EXISTS tokens (
           id SERIAL PRIMARY KEY,
@@ -42,8 +42,36 @@ if (process.env.DATABASE_URL) {
           name VARCHAR(100) NOT NULL,
           address VARCHAR(100) UNIQUE NOT NULL,
           launchpad VARCHAR(100) NOT NULL,
+          image TEXT DEFAULT '',
+          price NUMERIC(30, 12) DEFAULT 0,
+          change24h NUMERIC(10, 2) DEFAULT 0,
+          volume24h NUMERIC(20, 2) DEFAULT 0,
+          liquidity NUMERIC(20, 2) DEFAULT 0,
+          holders INT DEFAULT 0,
+          supply NUMERIC(30, 0) DEFAULT 0,
           bonding_progress INT DEFAULT 0,
+          is_platform_launchpad_token BOOLEAN DEFAULT TRUE,
           created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+
+      // Create bonded_tokens table (platform launchpad tokens that hit 100% bonding and graduated to DEX)
+      await pgPool.query(`
+        CREATE TABLE IF NOT EXISTS bonded_tokens (
+          id SERIAL PRIMARY KEY,
+          symbol VARCHAR(50) NOT NULL,
+          name VARCHAR(100) NOT NULL,
+          address VARCHAR(100) UNIQUE NOT NULL,
+          launchpad VARCHAR(100) NOT NULL,
+          image TEXT DEFAULT '',
+          price NUMERIC(30, 12) DEFAULT 0,
+          change24h NUMERIC(10, 2) DEFAULT 0,
+          volume24h NUMERIC(20, 2) DEFAULT 0,
+          liquidity NUMERIC(20, 2) DEFAULT 0,
+          holders INT DEFAULT 0,
+          supply NUMERIC(30, 0) DEFAULT 0,
+          dex_address VARCHAR(200) DEFAULT '',
+          graduated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
         );
       `);
       
@@ -124,6 +152,38 @@ app.get('/api/tokens', async (req, res) => {
     }
   } catch (error) {
     console.error("❌ Failed to query tokens:", error.message);
+    res.status(500).json({ error: 'Database query failed' });
+  }
+});
+
+// API: Get Bonded Tokens (platform launchpad tokens that graduated to DEX at 100% bonding)
+app.get('/api/bonded', async (req, res) => {
+  try {
+    if (pgPool) {
+      const result = await pgPool.query(`
+        SELECT
+          id, symbol, name, address, launchpad,
+          COALESCE(image, '') AS image,
+          COALESCE(price, 0) AS price,
+          COALESCE(change24h, 0) AS change24h,
+          COALESCE(volume24h, 0) AS volume24h,
+          COALESCE(liquidity, 0) AS liquidity,
+          COALESCE(holders, 0) AS holders,
+          COALESCE(supply, 0) AS supply,
+          COALESCE(dex_address, '') AS dex_address,
+          graduated_at
+        FROM bonded_tokens
+        ORDER BY graduated_at DESC
+        LIMIT 100
+      `);
+      res.json(result.rows);
+    } else {
+      if (!fs.existsSync(dbFallbackPath)) return res.json([]);
+      const data = JSON.parse(fs.readFileSync(dbFallbackPath, 'utf8'));
+      res.json(data.bonded_tokens || []);
+    }
+  } catch (error) {
+    console.error('❌ Failed to query bonded_tokens:', error.message);
     res.status(500).json({ error: 'Database query failed' });
   }
 });

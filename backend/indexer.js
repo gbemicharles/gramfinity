@@ -220,7 +220,6 @@ async function parseAndInsertNewLaunch(launchpadKey, tokenAddress, timestamp) {
   try {
     console.log(`🔍 Fetching real metadata for token at ${tokenAddress}...`);
 
-    // Fetch real token metadata from TonAPI
     const meta = await fetchTokenMetadata(tokenAddress);
     const price = await fetchTokenPrice(tokenAddress);
 
@@ -244,42 +243,38 @@ async function parseAndInsertNewLaunch(launchpadKey, tokenAddress, timestamp) {
     const launchpadLabel = LAUNCHPAD_LABEL[launchpadKey] || launchpadKey;
 
     const tokenObj = {
-      symbol,
-      name,
-      address: tokenAddress,
-      launchpad: launchpadLabel,
-      image,
-      price,
-      bonding_progress: bondingProgress,
-      supply,
-      holders,
-      is_platform_launchpad_token: true,
+      symbol, name, address: tokenAddress, launchpad: launchpadLabel,
+      image, price, bonding_progress: bondingProgress,
+      supply, holders, is_platform_launchpad_token: true,
       created_at: new Date(timestamp * 1000).toISOString()
     };
 
-    console.log(`📝 Saving token: $${symbol} (${name}) on ${launchpadLabel} | bonding: ${bondingProgress}%`);
+    console.log(`📝 Saving: $${symbol} on ${launchpadLabel} | bonding: ${bondingProgress}%`);
 
-    if (pgPool) {
-      await pgPool.query(`
-        INSERT INTO tokens (symbol, name, address, launchpad, image, price, bonding_progress, supply, holders, is_platform_launchpad_token, created_at)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, to_timestamp($11))
-        ON CONFLICT (address) DO UPDATE SET
-          symbol = EXCLUDED.symbol,
-          name = EXCLUDED.name,
-          image = EXCLUDED.image,
-          price = EXCLUDED.price,
-          bonding_progress = EXCLUDED.bonding_progress,
-          holders = EXCLUDED.holders;
-      `, [symbol, name, tokenAddress, launchpadLabel, image, price, bondingProgress, supply, holders, true, timestamp]);
-      console.log(`💾 Token saved to PostgreSQL.`);
+    if (bondingProgress >= 100) {
+      // Token has already bonded — write directly to bonded_tokens, skip tokens table
+      console.log(`🎓 $${symbol} already at 100% bonding — writing to bonded_tokens.`);
+      await graduateToBonded(tokenObj);
     } else {
-      const data = JSON.parse(fs.readFileSync(dbFallbackPath, 'utf8'));
-      const idx = data.tokens.findIndex(t => t.address === tokenAddress);
-      if (idx >= 0) data.tokens[idx] = tokenObj;
-      else data.tokens.unshift(tokenObj);
-      data.tokens = data.tokens.slice(0, 100);
-      fs.writeFileSync(dbFallbackPath, JSON.stringify(data, null, 2));
-      console.log(`💾 Token saved to local fallback JSON.`);
+      // Token still building — write to tokens table
+      if (pgPool) {
+        await pgPool.query(`
+          INSERT INTO tokens (symbol, name, address, launchpad, image, price, bonding_progress, supply, holders, is_platform_launchpad_token, created_at)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, to_timestamp($11))
+          ON CONFLICT (address) DO UPDATE SET
+            symbol = EXCLUDED.symbol, name = EXCLUDED.name, image = EXCLUDED.image,
+            price = EXCLUDED.price, bonding_progress = EXCLUDED.bonding_progress, holders = EXCLUDED.holders;
+        `, [symbol, name, tokenAddress, launchpadLabel, image, price, bondingProgress, supply, holders, true, timestamp]);
+        console.log(`💾 Token saved to tokens table (Postgres).`);
+      } else {
+        const data = JSON.parse(fs.readFileSync(dbFallbackPath, 'utf8'));
+        const idx = data.tokens.findIndex(t => t.address === tokenAddress);
+        if (idx >= 0) data.tokens[idx] = tokenObj;
+        else data.tokens.unshift(tokenObj);
+        data.tokens = data.tokens.slice(0, 100);
+        fs.writeFileSync(dbFallbackPath, JSON.stringify(data, null, 2));
+        console.log(`💾 Token saved to local fallback JSON.`);
+      }
     }
 
     broadcastTokenDeployment(tokenObj);
@@ -288,10 +283,95 @@ async function parseAndInsertNewLaunch(launchpadKey, tokenAddress, timestamp) {
   }
 }
 
+// Graduate a fully bonded token from tokens table into bonded_tokens table
+async function graduateToBonded(tokenObj) {
+  try {
+    if (pgPool) {
+      // Insert into bonded_tokens
+      await pgPool.query(`
+        INSERT INTO bonded_tokens (symbol, name, address, launchpad, image, price, volume24h, liquidity, holders, supply, graduated_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
+        ON CONFLICT (address) DO UPDATE SET
+          price = EXCLUDED.price, holders = EXCLUDED.holders,
+          volume24h = EXCLUDED.volume24h, image = EXCLUDED.image;
+      `, [
+        tokenObj.symbol, tokenObj.name, tokenObj.address, tokenObj.launchpad,
+        tokenObj.image, tokenObj.price, tokenObj.volume24h || 0,
+        tokenObj.liquidity || 0, tokenObj.holders, tokenObj.supply
+      ]);
+
+      // Remove from active tokens table (it has graduated)
+      await pgPool.query(`DELETE FROM tokens WHERE address = $1`, [tokenObj.address]);
+      console.log(`🎓 $${tokenObj.symbol} graduated — moved to bonded_tokens table.`);
+    } else {
+      const data = JSON.parse(fs.readFileSync(dbFallbackPath, 'utf8'));
+      // Remove from tokens
+      data.tokens = (data.tokens || []).filter(t => t.address !== tokenObj.address);
+      // Add to bonded_tokens
+      if (!data.bonded_tokens) data.bonded_tokens = [];
+      const exists = data.bonded_tokens.findIndex(t => t.address === tokenObj.address);
+      const bondedEntry = { ...tokenObj, graduated_at: new Date().toISOString() };
+      if (exists >= 0) data.bonded_tokens[exists] = bondedEntry;
+      else data.bonded_tokens.unshift(bondedEntry);
+      data.bonded_tokens = data.bonded_tokens.slice(0, 100);
+      fs.writeFileSync(dbFallbackPath, JSON.stringify(data, null, 2));
+      console.log(`🎓 $${tokenObj.symbol} graduated — moved to bonded_tokens in local fallback.`);
+    }
+
+    // Broadcast bonded graduation event to frontend clients
+    const postData = JSON.stringify({ type: 'token_bonded', data: tokenObj });
+    const req = http.request({
+      hostname: 'localhost', port: process.env.PORT || 4000,
+      path: '/api/webhook/broadcast', method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(postData) }
+    }, (res) => { res.on('data', () => {}); });
+    req.on('error', () => {});
+    req.write(postData);
+    req.end();
+  } catch (err) {
+    console.error(`❌ Failed to graduate token to bonded_tokens:`, err.message);
+  }
+}
+
+// Periodic poller: checks all active tokens for 100% bonding completion every 2 minutes
+async function pollBondingProgress() {
+  try {
+    let activeTokens = [];
+    if (pgPool) {
+      const res = await pgPool.query(`SELECT address, symbol, name, launchpad, image, supply, holders FROM tokens WHERE bonding_progress < 100`);
+      activeTokens = res.rows;
+    } else {
+      const data = JSON.parse(fs.readFileSync(dbFallbackPath, 'utf8'));
+      activeTokens = (data.tokens || []).filter(t => (t.bonding_progress || 0) < 100);
+    }
+
+    for (const token of activeTokens) {
+      try {
+        const result = await client.runMethod(Address.parse(token.address), 'get_pool_data');
+        const tonCollected = result.stack.readBigNumber();
+        const threshold = result.stack.readBigNumber();
+        const newProgress = Number((tonCollected * 100n) / threshold);
+
+        if (newProgress >= 100) {
+          console.log(`🎓 $${token.symbol} reached 100% bonding! Graduating to bonded_tokens...`);
+          const price = await fetchTokenPrice(token.address);
+          await graduateToBonded({ ...token, price, bonding_progress: 100 });
+        } else if (pgPool) {
+          // Update progress in tokens table
+          await pgPool.query(`UPDATE tokens SET bonding_progress = $1 WHERE address = $2`, [newProgress, token.address]);
+        }
+      } catch (e) {
+        // Contract may not support get_pool_data — skip silently
+      }
+    }
+  } catch (err) {
+    console.error('❌ Bonding progress poll error:', err.message);
+  }
+}
+
 // Simulation loop (only runs when no valid factory addresses are configured)
 function startSimulatedIndexerLoop() {
   console.log("🤖 Simulated indexer loop is disabled in production. Set valid factory addresses to enable live indexing.");
-  // Do NOT run simulation on production — only log so nothing fake is inserted
 }
 
 // Notify Express server about new token deployment via WebSocket broadcast
@@ -309,5 +389,9 @@ function broadcastTokenDeployment(token) {
   req.end();
 }
 
-// Run Indexer
+// Run Indexer + start bonding progress poller
 startIndexer();
+// Poll every 2 minutes to detect tokens that hit 100% bonding and graduate them
+setInterval(pollBondingProgress, 2 * 60 * 1000);
+// Run once immediately on startup too
+setTimeout(pollBondingProgress, 15000);
