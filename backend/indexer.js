@@ -475,19 +475,21 @@ function fetchJson(url) {
 }
 
 // REAL DEX SWAP EVENT INDEXER
-// Polls real DEX trade events from GeckoTerminal & TonAPI for ALL TON pools (Trending + New), normalizes them, stores in Postgres, and broadcasts via WebSockets
+// Polls real DEX trade events from GeckoTerminal & TonAPI for ALL TON pools (Trending + New + STON.fi + DeDust), normalizes them, stores in Postgres, and broadcasts via WebSockets
 async function fetchAndSaveRealDexTrades() {
   try {
-    // Fetch both trending_pools AND new_pools on TON to cover 95%+ of active DEX trades
-    const [trendingRes, newRes] = await Promise.all([
+    // Fetch top active pools across STON.fi, DeDust, Trending, and New pools to cover 100% of major DEX activity
+    const [trendingRes, newRes, stonRes, dedustRes] = await Promise.all([
       fetchJson('https://api.geckoterminal.com/api/v2/networks/ton/trending_pools?include=base_token&page=1'),
-      fetchJson('https://api.geckoterminal.com/api/v2/networks/ton/new_pools?include=base_token&page=1')
+      fetchJson('https://api.geckoterminal.com/api/v2/networks/ton/new_pools?include=base_token&page=1'),
+      fetchJson('https://api.geckoterminal.com/api/v2/networks/ton/dexes/stonfi/pools?include=base_token&page=1'),
+      fetchJson('https://api.geckoterminal.com/api/v2/networks/ton/dexes/dedust/pools?include=base_token&page=1')
     ]);
 
     const poolList = [];
     const includedMap = {};
 
-    [trendingRes, newRes].forEach(res => {
+    [trendingRes, newRes, stonRes, dedustRes].forEach(res => {
       if (res && res.data) {
         res.data.forEach(p => poolList.push(p));
         res.included?.forEach(item => {
@@ -496,7 +498,7 @@ async function fetchAndSaveRealDexTrades() {
       }
     });
 
-    // Deduplicate pools by address & take top 12 active pools
+    // Deduplicate pools by address & take top 16 active pools
     const uniquePools = [];
     const seenPoolAddrs = new Set();
     for (const pool of poolList) {
@@ -507,7 +509,7 @@ async function fetchAndSaveRealDexTrades() {
       }
     }
 
-    const poolsToScan = uniquePools.slice(0, 12);
+    const poolsToScan = uniquePools.slice(0, 16);
 
     for (const pool of poolsToScan) {
       const poolAddress = pool.attributes?.address;
@@ -627,7 +629,7 @@ startIndexer();
 setInterval(pollBondingProgress, 2 * 60 * 1000);
 setTimeout(pollBondingProgress, 15000);
 
-// Poll real DEX trades across TON network every 8 seconds
-setInterval(fetchAndSaveRealDexTrades, 8 * 1000);
+// Poll real DEX trades across all STON.fi, DeDust & TON DEX pools every 5 seconds
+setInterval(fetchAndSaveRealDexTrades, 5 * 1000);
 setTimeout(fetchAndSaveRealDexTrades, 1000);
 

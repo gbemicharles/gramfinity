@@ -118,8 +118,8 @@ export default function Discover({ onSelectTokenForTrade }) {
       console.error('WebSocket connection error:', err);
     }
 
-    // 3. Fallback poller to fetch activities every 15 seconds if WebSocket drops
-    const pollInterval = setInterval(fetchActivities, 15000);
+    // 3. Fallback poller to fetch activities every 5 seconds if WebSocket drops
+    const pollInterval = setInterval(fetchActivities, 5000);
 
     return () => {
       clearInterval(pollInterval);
@@ -182,8 +182,10 @@ export default function Discover({ onSelectTokenForTrade }) {
   }, []);
 
   const getRelativeTime = (timestamp) => {
-    const diffMs = Date.now() - timestamp;
+    if (!timestamp) return 'just now';
+    const diffMs = Date.now() - Number(timestamp);
     const diffSec = Math.floor(diffMs / 1000);
+    if (diffSec <= 2) return 'just now';
     if (diffSec < 60) return `${diffSec}s`;
     const diffMin = Math.floor(diffSec / 60);
     if (diffMin < 60) return `${diffMin}m`;
