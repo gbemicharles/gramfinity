@@ -404,19 +404,20 @@ export default function Discover({ onSelectTokenForTrade }) {
 
     // Tab Filter
     if (activeTab === 'JUST_LAUNCHED') {
-      // Real live mainnet tokens launched on TON network within last 48 hours + unbonded launchpad tokens
+      // Real live mainnet TON tokens created in last 48 hours (fetched from GeckoTerminal API) + platform launchpad tokens (<100%)
       const NOW = Date.now();
       const FORTY_EIGHT_HOURS = 48 * 60 * 60 * 1000;
       list = list.filter(t => {
         if (t.symbol === 'TON') return false;
-        // Unbonded launchpad tokens building bonding curve
-        if (t.isLaunchpadToken && (t.bondingProgress || 0) < 100) return true;
-        // Real mainnet pools launched within last 48 hours
-        return (NOW - (t.launchTime || 0)) <= FORTY_EIGHT_HOURS;
+        // Platform launchpad tokens building bonding curve (<100%)
+        if (t.isPlatformLaunchpadToken && (t.bondingProgress || 0) < 100) return true;
+        // Real mainnet pools fetched from GeckoTerminal API created within last 48 hours
+        if (t.launchTime && (NOW - t.launchTime) <= FORTY_EIGHT_HOURS && !t.isPlatformLaunchpadToken) return true;
+        return false;
       });
     } else if (activeTab === 'BONDED') {
-      // Tokens that reached 100% bonding curve progress or DEX graduation
-      list = list.filter(t => t.symbol !== 'TON' && (t.bondingProgress >= 100 || t.isDex));
+      // STRICTLY platform launchpad tokens that reached 100% bonding curve completion!
+      list = list.filter(t => t.isPlatformLaunchpadToken && (t.bondingProgress || 0) >= 100);
     }
 
     // Sorting logic
