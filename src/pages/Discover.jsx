@@ -870,20 +870,22 @@ export default function Discover({ onSelectTokenForTrade }) {
                     <tr>
                       <th style={{ width: '28px', padding: '10px 8px', textAlign: 'center' }}>#</th>
                       <th style={{ width: '42px', padding: '10px 4px' }}>TOKEN</th>
-                      <th style={{ padding: '10px 8px' }}>NAME</th>
+                      <th style={{ padding: '10px 8px' }}>NAME & SAFETY</th>
                       <th style={{ textAlign: 'right', padding: '10px 10px' }}>MCAP ↑↓</th>
                       <th style={{ textAlign: 'center', padding: '10px 8px', width: '85px' }}>CHART</th>
                       <th style={{ textAlign: 'right', padding: '10px 10px' }}>VOL 24H ↑↓</th>
+                      <th style={{ padding: '10px 10px', width: '100px' }}>BONDING %</th>
                       <th style={{ textAlign: 'right', padding: '10px 10px' }}>HOLDERS ↑↓</th>
                       <th style={{ textAlign: 'right', padding: '10px 10px' }}>AGE ↑↓</th>
-                      <th style={{ textAlign: 'center', padding: '10px 8px', width: '90px' }}>ACTION</th>
+                      <th style={{ textAlign: 'center', padding: '10px 8px', width: '110px' }}>ACTION</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredTokens.map((token, index) => {
                       const flash = flashStates[token.symbol];
                       const flashBg = flash ? (flash.type === 'up' ? 'rgba(0, 255, 135, 0.08)' : 'rgba(239, 68, 68, 0.08)') : 'transparent';
-                      
+                      const isHighRisk = (token.security?.rugScore || 15) > 50;
+
                       return (
                         <tr 
                           key={token.symbol}
@@ -915,13 +917,13 @@ export default function Discover({ onSelectTokenForTrade }) {
                             </div>
                           </td>
 
-                          {/* Token Name & Ticker */}
+                          {/* Token Name, Ticker & Safety Risk Badge */}
                           <td style={{ padding: '10px 8px' }}>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                               <span style={{ fontWeight: 800, color: '#ffffff', fontSize: '0.88rem', letterSpacing: '-0.01em' }}>
                                 {token.name}
                               </span>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                                 <span style={{ fontSize: '0.68rem', color: '#94a3b8', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>
                                   ${token.symbol}
                                 </span>
@@ -937,6 +939,19 @@ export default function Discover({ onSelectTokenForTrade }) {
                                   }}
                                 >
                                   {token.launchpad}
+                                </span>
+                                {/* Safety Scan Rug Risk Indicator */}
+                                <span style={{
+                                  fontSize: '0.52rem',
+                                  padding: '1px 4px',
+                                  borderRadius: '3px',
+                                  fontWeight: 700,
+                                  background: isHighRisk ? 'rgba(239, 68, 68, 0.12)' : 'rgba(16, 185, 129, 0.12)',
+                                  color: isHighRisk ? 'var(--color-sell)' : 'var(--color-buy)',
+                                  border: '1px solid currentColor',
+                                  fontFamily: 'var(--font-mono)'
+                                }}>
+                                  {isHighRisk ? '⚠️ High Risk' : '🛡️ Safe'}
                                 </span>
                                 <button
                                   type="button"
@@ -970,6 +985,23 @@ export default function Discover({ onSelectTokenForTrade }) {
                             </span>
                           </td>
 
+                          {/* BONDING % */}
+                          <td style={{ padding: '10px' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                              <span style={{ fontSize: '0.72rem', fontWeight: 800, color: token.isDex ? 'var(--accent-green)' : 'var(--accent-cyan)', fontFamily: 'var(--font-mono)' }}>
+                                {token.isDex ? '100% DEX' : `${token.bondingProgress.toFixed(0)}%`}
+                              </span>
+                              <div style={{ height: '4px', background: 'rgba(255,255,255,0.06)', borderRadius: '2px', overflow: 'hidden' }}>
+                                <div style={{
+                                  width: `${token.bondingProgress}%`,
+                                  height: '100%',
+                                  background: token.isDex ? 'linear-gradient(90deg, #00ff87, #10b981)' : 'linear-gradient(90deg, #00e5ff, #00a8ff)',
+                                  borderRadius: '2px'
+                                }} />
+                              </div>
+                            </div>
+                          </td>
+
                           {/* HOLDERS */}
                           <td style={{ textAlign: 'right', padding: '10px' }}>
                             <span className="bold-metric">
@@ -986,14 +1018,25 @@ export default function Discover({ onSelectTokenForTrade }) {
 
                           {/* Quick Action Button */}
                           <td style={{ textAlign: 'center', padding: '10px 8px' }}>
-                            <button
-                              type="button"
-                              onClick={(e) => { e.stopPropagation(); onSelectTokenForTrade(token.symbol); }}
-                              className="btn ape-in-btn"
-                              style={{ padding: '4px 10px', fontSize: '0.68rem', borderRadius: '6px', height: '26px', width: '100%', whiteSpace: 'nowrap' }}
-                            >
-                              <Zap size={11} fill="currentColor" /> APE IN
-                            </button>
+                            <div style={{ display: 'flex', gap: '4px', justifyContent: 'center' }}>
+                              <button
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); onSelectTokenForTrade(token.symbol); }}
+                                className="btn ape-in-btn"
+                                style={{ padding: '4px 8px', fontSize: '0.65rem', borderRadius: '6px', height: '26px', flex: 1, whiteSpace: 'nowrap' }}
+                              >
+                                <Zap size={10} fill="currentColor" /> APE
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); setSelectedDetailsToken(token); }}
+                                className="btn btn-secondary"
+                                style={{ padding: '4px 6px', fontSize: '0.62rem', borderRadius: '6px', height: '26px' }}
+                                title="Safety Audit & Details"
+                              >
+                                Scan
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       );
