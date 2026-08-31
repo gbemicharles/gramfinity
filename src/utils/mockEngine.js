@@ -806,46 +806,50 @@ class MockEngine {
         console.error("Error fetching trending TON pools", e);
       }
 
-      // 6. Fetch dynamic live launches from backend indexer API if running
+      // 6. Fetch platform launchpad tokens from backend Postgres DB
       try {
-        const apiBase = window.location.port === '3000' ? 'http://localhost:4000' : '';
+        const apiBase = window.location.hostname === 'localhost' ? 'http://localhost:4000' : '';
         const backendRes = await fetch(`${apiBase}/api/tokens`);
         if (backendRes.ok) {
           const backendTokens = await backendRes.json();
           backendTokens.forEach(token => {
-            const price = token.price || 0.0092;
+            // Map DB row to full frontend token object using REAL metadata
             mainnetTokens[token.symbol] = {
               symbol: token.symbol,
               name: token.name,
               address: token.address,
-              price: price,
+              image: token.image || '',
+              price: parseFloat(token.price) || 0,
               change1h: 0,
-              change24h: 0,
-              volume24h: 12000,
-              volume1h: 500,
-              volume5m: 40,
+              change24h: parseFloat(token.change24h) || 0,
+              volume24h: parseFloat(token.volume24h) || 0,
+              volume1h: parseFloat(token.volume24h) / 24 || 0,
+              volume5m: parseFloat(token.volume24h) / 288 || 0,
               buySellRatio: 0.5,
               holdersGrowth: 0,
-              initialLiquidity: 5000,
-              devWallet: "EQ_indexer_dev",
+              initialLiquidity: parseFloat(token.liquidity) * 0.8 || 0,
+              devWallet: 'EQ_platform_' + token.symbol,
               launchTime: new Date(token.created_at).getTime(),
-              category: "DeFi",
-              logoBg: "linear-gradient(135deg, #0f172a, #1e293b)",
-              socialLinks: { telegram: "https://t.me/toncoin", x: "https://x.com" },
-              liquidity: 8000,
-              supply: 10000000,
-              holders: 120,
-              security: { rugScore: 12, rugRisk: "Low Risk", verified: true, renounced: true, lockedLiquidity: 80 },
+              category: 'Meme',
+              logoBg: 'linear-gradient(135deg, #0f172a, #1e293b)',
+              socialLinks: { telegram: '', x: '', website: '' },
+              liquidity: parseFloat(token.liquidity) || 0,
+              supply: parseFloat(token.supply) || 0,
+              holders: parseInt(token.holders) || 0,
+              security: { rugScore: 10, rugRisk: 'Low Risk', verified: true, renounced: false, lockedLiquidity: 80 },
               decimals: 9,
               launchpad: token.launchpad,
-              isDex: false,
-              bondingProgress: token.bonding_progress
+              isPlatformLaunchpadToken: token.is_platform_launchpad_token === true || token.is_platform_launchpad_token === 'true',
+              bondingProgress: parseInt(token.bonding_progress) || 0,
+              isDex: parseInt(token.bonding_progress) >= 100
             };
           });
+          console.log(`✅ Loaded ${backendTokens.length} platform tokens from backend DB.`);
         }
       } catch (err) {
-        // Silence API fetch errors
+        // Silence API fetch errors (backend may not be running in dev)
       }
+
 
       // Merge into existing tokens in-place (never wipe the list between fetches)
       Object.assign(this.tokens, mainnetTokens);

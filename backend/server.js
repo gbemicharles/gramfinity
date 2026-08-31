@@ -99,12 +99,26 @@ app.get('/api/health', (req, res) => {
 app.get('/api/tokens', async (req, res) => {
   try {
     if (pgPool) {
-      const result = await pgPool.query('SELECT * FROM tokens ORDER BY created_at DESC LIMIT 50');
+      const result = await pgPool.query(`
+        SELECT
+          id, symbol, name, address, launchpad,
+          COALESCE(image, '') AS image,
+          COALESCE(price, 0) AS price,
+          COALESCE(change24h, 0) AS change24h,
+          COALESCE(volume24h, 0) AS volume24h,
+          COALESCE(liquidity, 0) AS liquidity,
+          COALESCE(holders, 0) AS holders,
+          COALESCE(supply, 0) AS supply,
+          COALESCE(bonding_progress, 0) AS bonding_progress,
+          COALESCE(is_platform_launchpad_token, TRUE) AS is_platform_launchpad_token,
+          created_at
+        FROM tokens
+        ORDER BY created_at DESC
+        LIMIT 100
+      `);
       res.json(result.rows);
     } else {
-      if (!fs.existsSync(dbFallbackPath)) {
-        return res.json([]);
-      }
+      if (!fs.existsSync(dbFallbackPath)) return res.json([]);
       const data = JSON.parse(fs.readFileSync(dbFallbackPath, 'utf8'));
       res.json(data.tokens || []);
     }
