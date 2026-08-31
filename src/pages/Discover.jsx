@@ -78,6 +78,8 @@ export default function Discover({ onSelectTokenForTrade }) {
 
   // Real TON Blockchain Live Activity Feed Integration (WebSocket + REST)
   useEffect(() => {
+    const STABLECOIN_SYMBOLS = ['USDT', 'USDC', 'USD', 'TON', 'WTON', 'MYTONWALLET', 'UNKNOWN', 'unknown', 'test', 'TEST'];
+
     // 1. Fetch initial real trade activity history from backend API
     const fetchActivities = async () => {
       try {
@@ -86,7 +88,8 @@ export default function Discover({ onSelectTokenForTrade }) {
         if (res.ok) {
           const data = await res.json();
           if (Array.isArray(data)) {
-            setTradesLog(data);
+            const filtered = data.filter(item => item && item.token && !STABLECOIN_SYMBOLS.includes(item.token));
+            setTradesLog(filtered);
           }
         }
       } catch (err) {
@@ -107,7 +110,7 @@ export default function Discover({ onSelectTokenForTrade }) {
       });
 
       socket.on('new_activity', (newTrade) => {
-        if (!newTrade || !newTrade.id || !newTrade.token || ['UNKNOWN', 'unknown', 'test', 'TEST'].includes(newTrade.token)) return;
+        if (!newTrade || !newTrade.id || !newTrade.token || STABLECOIN_SYMBOLS.includes(newTrade.token)) return;
         setTradesLog(prev => {
           // Deduplicate by trade ID
           if (prev.some(item => item.id === newTrade.id)) return prev;

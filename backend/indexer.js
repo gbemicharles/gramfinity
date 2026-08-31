@@ -434,24 +434,24 @@ function broadcastTokenDeployment(token) {
   req.end();
 }
 
+// Known quote / stablecoin symbols to EXCLUDE from live activity feed
+const STABLECOIN_SYMBOLS = new Set(['USDT', 'USDC', 'USD', 'TON', 'WTON', 'MYTONWALLET', 'UNKNOWN', 'TEST', '']);
+
 // Helper to extract clean token symbol from pool name & base token metadata
 function extractCleanSymbol(poolName, baseTokenObj) {
   if (baseTokenObj && baseTokenObj.symbol && typeof baseTokenObj.symbol === 'string') {
-    const sym = baseTokenObj.symbol.trim();
-    if (sym.length > 0 && !['TON', 'USDT', 'USDC', 'UNKNOWN', 'unknown', 'test', 'TEST'].includes(sym)) {
-      return sym.replace('$', '').toUpperCase();
+    const sym = baseTokenObj.symbol.trim().toUpperCase();
+    if (sym.length > 0 && !STABLECOIN_SYMBOLS.has(sym)) {
+      return sym.replace('$', '');
     }
   }
   if (poolName && typeof poolName === 'string') {
     const parts = poolName.split(' / ').map(p => p.trim());
     if (parts.length >= 2) {
-      const quoteCoins = ['TON', 'WTON', 'USDT', 'USDC', 'USD'];
-      const nonQuote = parts.find(p => !quoteCoins.includes(p.toUpperCase()));
-      if (nonQuote && nonQuote.length > 0 && !['UNKNOWN', 'test', 'unknown'].includes(nonQuote.toLowerCase())) {
+      const nonQuote = parts.find(p => !STABLECOIN_SYMBOLS.has(p.toUpperCase()));
+      if (nonQuote && nonQuote.length > 0 && !STABLECOIN_SYMBOLS.has(nonQuote.toUpperCase())) {
         return nonQuote.replace('$', '').toUpperCase();
       }
-      if (parts[0].toUpperCase() !== 'TON' && parts[0].toUpperCase() !== 'USDT') return parts[0].replace('$', '').toUpperCase();
-      if (parts[1].toUpperCase() !== 'TON' && parts[1].toUpperCase() !== 'USDT') return parts[1].replace('$', '').toUpperCase();
     }
   }
   return null;
@@ -470,26 +470,32 @@ function fetchJson(url) {
       });
     });
     req.on('error', () => resolve(null));
-    req.setTimeout(8000, () => { req.destroy(); resolve(null); });
+    req.setTimeout(6000, () => { req.destroy(); resolve(null); });
   });
 }
 
-// REAL DEX SWAP EVENT INDEXER
-// Polls real DEX trade events from GeckoTerminal & TonAPI for ALL TON pools (Trending + New + STON.fi + DeDust), normalizes them, stores in Postgres, and broadcasts via WebSockets
-async function fetchAndSaveRealDexTrades() {
+// Cached pool scanner state to prevent GeckoTerminal API 429 rate-limiting
+let cachedPools = [];
+let lastPoolFetchTime = 0;
+let currentPoolIndex = 0;
+
+async function getActivePoolsToScan() {
+  const now = Date.now();
+  // Refresh active pool list every 60 seconds
+  if (cachedPools.length > 0 && (now - lastPoolFetchTime < 60000)) {
+    return cachedPools;
+  }
+
   try {
-    // Fetch top active pools across STON.fi, DeDust, Trending, and New pools to cover 100% of major DEX activity
-    const [trendingRes, newRes, stonRes, dedustRes] = await Promise.all([
+    const [trendingRes, newRes] = await Promise.all([
       fetchJson('https://api.geckoterminal.com/api/v2/networks/ton/trending_pools?include=base_token&page=1'),
-      fetchJson('https://api.geckoterminal.com/api/v2/networks/ton/new_pools?include=base_token&page=1'),
-      fetchJson('https://api.geckoterminal.com/api/v2/networks/ton/dexes/stonfi/pools?include=base_token&page=1'),
-      fetchJson('https://api.geckoterminal.com/api/v2/networks/ton/dexes/dedust/pools?include=base_token&page=1')
+      fetchJson('https://api.geckoterminal.com/api/v2/networks/ton/new_pools?include=base_token&page=1')
     ]);
 
     const poolList = [];
     const includedMap = {};
 
-    [trendingRes, newRes, stonRes, dedustRes].forEach(res => {
+    [trendingRes, newRes].forEach(res => {
       if (res && res.data) {
         res.data.forEach(p => poolList.push(p));
         res.included?.forEach(item => {
@@ -498,43 +504,73 @@ async function fetchAndSaveRealDexTrades() {
       }
     });
 
-    // Deduplicate pools by address & take top 16 active pools
-    const uniquePools = [];
-    const seenPoolAddrs = new Set();
+    const validPools = [];
+    const seen = new Set();
     for (const pool of poolList) {
       const addr = pool.attributes?.address;
-      if (addr && !seenPoolAddrs.has(addr)) {
-        seenPoolAddrs.add(addr);
-        uniquePools.push(pool);
-      }
-    }
-
-    const poolsToScan = uniquePools.slice(0, 16);
-
-    for (const pool of poolsToScan) {
-      const poolAddress = pool.attributes?.address;
-      if (!poolAddress) continue;
-
-      const tradesRes = await fetchJson(`https://api.geckoterminal.com/api/v2/networks/ton/pools/${poolAddress}/trades`);
-      if (!tradesRes || !tradesRes.data) continue;
+      if (!addr || seen.has(addr)) continue;
+      seen.add(addr);
 
       const baseTokenId = pool.relationships?.base_token?.data?.id;
       const baseToken = includedMap[baseTokenId]?.attributes;
       const poolName = pool.attributes?.name || '';
       const symbol = extractCleanSymbol(poolName, baseToken);
 
-      // Skip trades if symbol is UNKNOWN or invalid
-      if (!symbol || symbol === 'UNKNOWN' || symbol === 'TEST') continue;
+      // EXCLUDE all USDT, TON, USDC, and UNKNOWN tokens
+      if (symbol && !STABLECOIN_SYMBOLS.has(symbol)) {
+        const dexId = pool.relationships?.dex?.data?.id || '';
+        const launchpad = dexId === 'stonfi' || dexId === 'stonfi-v2' ? 'STON.fi DEX' :
+                          dexId === 'dedust' || dexId === 'dedust-v2' ? 'DeDust DEX' :
+                          dexId === 'uranus' ? 'TopBlast.lol' : 'TON DEX';
+        validPools.push({
+          address: addr,
+          symbol,
+          tokenAddress: baseTokenId?.split('_')?.[1] || addr,
+          launchpad
+        });
+      }
+    }
 
-      const tokenAddress = baseTokenId?.split('_')?.[1] || poolAddress;
-      const dexId = pool.relationships?.dex?.data?.id || '';
-      const launchpad = dexId === 'stonfi' || dexId === 'stonfi-v2' ? 'STON.fi DEX' :
-                        dexId === 'dedust' || dexId === 'dedust-v2' ? 'DeDust DEX' :
-                        dexId === 'uranus' ? 'TopBlast.lol' : 'TON DEX';
+    if (validPools.length > 0) {
+      cachedPools = validPools.slice(0, 16);
+      lastPoolFetchTime = now;
+      console.log(`📡 Indexer cached ${cachedPools.length} active Jetton pools (USDT & TON excluded).`);
+    }
+  } catch (err) {
+    console.error('❌ Error refreshing pool scan list:', err.message);
+  }
+
+  return cachedPools;
+}
+
+// REAL DEX SWAP EVENT INDEXER
+// Polls real DEX trade events for non-stablecoin TON Jettons, stores in Postgres, and broadcasts via WebSockets
+async function fetchAndSaveRealDexTrades() {
+  try {
+    const pools = await getActivePoolsToScan();
+    if (pools.length === 0) return;
+
+    // Rotate through 3 pools per tick to stay strictly within rate limits
+    const batchSize = 3;
+    const batch = [];
+    for (let i = 0; i < batchSize; i++) {
+      batch.push(pools[(currentPoolIndex + i) % pools.length]);
+    }
+    currentPoolIndex = (currentPoolIndex + batchSize) % pools.length;
+
+    for (const pool of batch) {
+      if (!pool || !pool.address) continue;
+
+      const tradesRes = await fetchJson(`https://api.geckoterminal.com/api/v2/networks/ton/pools/${pool.address}/trades`);
+      if (!tradesRes || !tradesRes.data) continue;
 
       for (const trade of tradesRes.data) {
         const attr = trade.attributes;
         if (!attr || !attr.tx_hash) continue;
+
+        const symbol = pool.symbol;
+        // Double check symbol is not USDT or stablecoin
+        if (!symbol || STABLECOIN_SYMBOLS.has(symbol)) continue;
 
         const txHash = attr.tx_hash;
         const id = `tx_${txHash}`;
@@ -557,11 +593,11 @@ async function fetchAndSaveRealDexTrades() {
           buyer,
           type,
           token: symbol,
-          tokenAddress,
+          tokenAddress: pool.tokenAddress,
           amountToken: Math.round(amountToken),
           amountTON,
           amountUSD,
-          launchpad,
+          launchpad: pool.launchpad,
           time
         };
 
