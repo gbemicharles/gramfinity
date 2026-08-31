@@ -261,6 +261,28 @@ export default function Discover({ onSelectTokenForTrade }) {
     );
   };
 
+  const getTokenImageUrl = (token) => {
+    if (token.image) return token.image;
+    if (token.logo) return token.logo;
+    if (token.icon) return token.icon;
+
+    const symbolUpper = (token.symbol || '').toUpperCase();
+    const map = {
+      'TON': 'https://assets.coingecko.com/coins/images/17980/large/ton_symbol.png',
+      'NOT': 'https://assets.coingecko.com/coins/images/37855/large/notcoin.png',
+      'DOGS': 'https://assets.coingecko.com/coins/images/39563/large/dogs.png',
+      'HMSTR': 'https://assets.coingecko.com/coins/images/39209/large/hamster.png',
+      'REDO': 'https://assets.coingecko.com/coins/images/37392/large/redo.png',
+      'GRAM': 'https://raw.githubusercontent.com/telegramdesktop/tdesktop/dev/Telegram/Resources/art/icon256.png',
+      'PEPE': 'https://assets.coingecko.com/coins/images/29850/large/pepe-token.png',
+      'CATI': 'https://assets.coingecko.com/coins/images/39904/large/cati.png',
+      'MAJOR': 'https://assets.coingecko.com/coins/images/40120/large/major.png',
+    };
+
+    if (map[symbolUpper]) return map[symbolUpper];
+    return `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(symbolUpper || token.address || 'token')}`;
+  };
+
   const copyToClipboard = (address, label) => {
     navigator.clipboard.writeText(address);
     setCopiedAddress(address);
@@ -749,20 +771,39 @@ export default function Discover({ onSelectTokenForTrade }) {
                           {/* Token Logo Avatar */}
                           <td style={{ padding: '10px 4px' }}>
                             <div style={{
-                              width: '36px',
-                              height: '36px',
+                              width: '38px',
+                              height: '38px',
                               borderRadius: '50%',
-                              background: token.logoBg || 'linear-gradient(135deg, #1e293b, #0f172a)',
+                              overflow: 'hidden',
+                              background: '#0a0e17',
+                              border: '1.5px solid rgba(255, 255, 255, 0.12)',
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
-                              fontWeight: 800,
-                              fontSize: '0.85rem',
-                              color: '#ffffff',
-                              border: '1.5px solid var(--border-color)',
                               flexShrink: 0
                             }}>
-                              {token.symbol.charAt(0)}
+                              <img
+                                src={getTokenImageUrl(token)}
+                                alt={token.symbol}
+                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                onError={(e) => {
+                                  e.target.style.display = 'none';
+                                  if (e.target.nextSibling) e.target.nextSibling.style.display = 'flex';
+                                }}
+                              />
+                              <div style={{
+                                display: 'none',
+                                width: '100%',
+                                height: '100%',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontWeight: 800,
+                                fontSize: '0.85rem',
+                                color: '#ffffff',
+                                background: token.logoBg || 'linear-gradient(135deg, #1e293b, #0f172a)'
+                              }}>
+                                {token.symbol?.charAt(0)}
+                              </div>
                             </div>
                           </td>
 
