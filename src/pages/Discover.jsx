@@ -395,87 +395,7 @@ export default function Discover({ onSelectTokenForTrade }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - var(--header-height) - var(--statsbar-height))', overflow: 'hidden' }}>
       
-      {/* 1. LIVE PURCHASES MARQUEE TICKER */}
-      <div className="marquee-wrapper">
-        <div className="animate-marquee-scroll">
-          {tradesLog.slice(0, 10).map((trade, idx) => (
-            <div
-              key={`marquee-1-${trade.id}-${idx}`}
-              onClick={() => onSelectTokenForTrade(trade.token)}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '8px',
-                background: 'var(--bg-tertiary)',
-                border: '1px solid var(--border-color)',
-                borderRadius: '16px',
-                padding: '4px 12px',
-                fontSize: '0.72rem',
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-                flexShrink: 0
-              }}
-              className="hover:border-cyan"
-            >
-              <span style={{
-                width: '6px',
-                height: '6px',
-                borderRadius: '50%',
-                background: trade.type === 'BUY' ? 'var(--color-buy)' : 'var(--color-sell)',
-                boxShadow: trade.type === 'BUY' ? '0 0 6px var(--color-buy)' : '0 0 6px var(--color-sell)'
-              }} />
-              <span style={{ fontWeight: 600, color: '#ffffff' }}>{trade.buyer}</span>
-              <span style={{ color: trade.type === 'BUY' ? 'var(--color-buy)' : 'var(--color-sell)', fontSize: '0.68rem', textTransform: 'uppercase', fontWeight: 700 }}>
-                {trade.type === 'BUY' ? 'bought' : 'sold'}
-              </span>
-              <span style={{ fontWeight: 700, color: '#ffffff' }}>{trade.amountToken.toLocaleString()} ${trade.token}</span>
-              <span style={{ color: 'var(--text-muted)' }}>for</span>
-              <span style={{ color: 'var(--accent-cyan)', fontFamily: 'var(--font-mono)' }}>{trade.amountTON} TON</span>
-            </div>
-          ))}
-        </div>
-        
-        {/* Duplicate list for continuous scroll */}
-        <div className="animate-marquee-scroll" aria-hidden="true">
-          {tradesLog.slice(0, 10).map((trade, idx) => (
-            <div
-              key={`marquee-2-${trade.id}-${idx}`}
-              onClick={() => onSelectTokenForTrade(trade.token)}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '8px',
-                background: 'var(--bg-tertiary)',
-                border: '1px solid var(--border-color)',
-                borderRadius: '16px',
-                padding: '4px 12px',
-                fontSize: '0.72rem',
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-                flexShrink: 0
-              }}
-              className="hover:border-cyan"
-            >
-              <span style={{
-                width: '6px',
-                height: '6px',
-                borderRadius: '50%',
-                background: trade.type === 'BUY' ? 'var(--color-buy)' : 'var(--color-sell)',
-                boxShadow: trade.type === 'BUY' ? '0 0 6px var(--color-buy)' : '0 0 6px var(--color-sell)'
-              }} />
-              <span style={{ fontWeight: 600, color: '#ffffff' }}>{trade.buyer}</span>
-              <span style={{ color: trade.type === 'BUY' ? 'var(--color-buy)' : 'var(--color-sell)', fontSize: '0.68rem', textTransform: 'uppercase', fontWeight: 700 }}>
-                {trade.type === 'BUY' ? 'bought' : 'sold'}
-              </span>
-              <span style={{ fontWeight: 700, color: '#ffffff' }}>{trade.amountToken.toLocaleString()} ${trade.token}</span>
-              <span style={{ color: 'var(--text-muted)' }}>for</span>
-              <span style={{ color: 'var(--accent-cyan)', fontFamily: 'var(--font-mono)' }}>{trade.amountTON} TON</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* 2. SPLIT SCANNER WORKSPACE */}
+      {/* SCANNER WORKSPACE */}
       <div className={`scanner-split-container ${feedCollapsed ? 'feed-collapsed' : ''}`}>
         
         {/* LEFT PANEL: Filters, Tabs, Table/Cards View */}
@@ -914,17 +834,16 @@ export default function Discover({ onSelectTokenForTrade }) {
                 <table className="scanner-table">
                   <thead>
                     <tr>
-                      <th style={{ width: '40px' }}>#</th>
-                      <th>Token</th>
-                      <th>Origin</th>
-                      <th>Age / Radar</th>
-                      <th style={{ textAlign: 'right' }}>Price</th>
-                      <th style={{ textAlign: 'right' }}>24h Vol</th>
-                      <th style={{ textAlign: 'right' }}>Market Cap</th>
-                      <th style={{ textAlign: 'right' }}>Holders</th>
-                      <th style={{ width: '130px' }}>Bonding %</th>
-                      <th style={{ textAlign: 'center' }}>Rug Score</th>
-                      <th style={{ textAlign: 'center', width: '150px' }}>Action</th>
+                      <th style={{ width: '28px', padding: '6px 4px', textAlign: 'center' }}>#</th>
+                      <th style={{ padding: '6px 8px' }}>Token</th>
+                      <th style={{ padding: '6px 8px' }}>Origin</th>
+                      <th style={{ padding: '6px 8px' }}>Age / Stage</th>
+                      <th style={{ textAlign: 'right', padding: '6px 8px' }}>Price (24h)</th>
+                      <th style={{ textAlign: 'right', padding: '6px 8px' }}>Vol / MCAP</th>
+                      <th style={{ textAlign: 'right', padding: '6px 8px' }}>Holders</th>
+                      <th style={{ padding: '6px 8px', minWidth: '90px' }}>Bonding</th>
+                      <th style={{ textAlign: 'center', padding: '6px 6px' }}>Risk</th>
+                      <th style={{ textAlign: 'center', padding: '6px 6px', width: '100px' }}>Action</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -939,47 +858,47 @@ export default function Discover({ onSelectTokenForTrade }) {
                           style={{ cursor: 'pointer', background: flashBg }}
                         >
                           {/* Index */}
-                          <td style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', fontSize: '0.68rem' }}>
+                          <td style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', fontSize: '0.65rem', textAlign: 'center', padding: '6px 4px' }}>
                             {index + 1}
                           </td>
 
                           {/* Token Name & CA */}
-                          <td>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <td style={{ padding: '6px 8px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                               <div style={{
-                                width: '28px',
-                                height: '28px',
+                                width: '24px',
+                                height: '24px',
                                 borderRadius: '50%',
                                 background: token.logoBg || 'linear-gradient(135deg, #1e293b, #0f172a)',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 fontWeight: 700,
-                                fontSize: '0.75rem',
+                                fontSize: '0.7rem',
                                 color: '#ffffff',
                                 border: '1px solid var(--border-color)',
                                 flexShrink: 0
                               }}>
                                 {token.symbol.charAt(0)}
                               </div>
-                              <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                  <span style={{ fontWeight: 700, color: '#ffffff', fontSize: '0.78rem' }}>
+                              <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                  <span style={{ fontWeight: 700, color: '#ffffff', fontSize: '0.75rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                     {token.name}
                                   </span>
-                                  <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
+                                  <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
                                     ${token.symbol}
                                   </span>
                                 </div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.6rem', color: 'var(--text-muted)' }}>
-                                  <span>CA: {token.address.slice(0, 4)}...{token.address.slice(-4)}</span>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '3px', fontSize: '0.58rem', color: 'var(--text-muted)' }}>
+                                  <span>CA: {token.address.slice(0, 4)}...{token.address.slice(-3)}</span>
                                   <button
                                     type="button"
                                     onClick={(e) => { e.stopPropagation(); copyToClipboard(token.address, 'Contract Address'); }}
                                     style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 0 }}
                                     className="hover:text-cyan"
                                   >
-                                    {copiedAddress === token.address ? <Check size={10} className="text-green" /> : <Copy size={10} />}
+                                    {copiedAddress === token.address ? <Check size={9} className="text-green" /> : <Copy size={9} />}
                                   </button>
                                 </div>
                               </div>
@@ -987,13 +906,13 @@ export default function Discover({ onSelectTokenForTrade }) {
                           </td>
 
                           {/* Origin Badge */}
-                          <td>
+                          <td style={{ padding: '6px 8px' }}>
                             <span 
                               className="tag"
                               style={{
-                                fontSize: '0.58rem',
-                                padding: '1px 5px',
-                                borderRadius: '4px',
+                                fontSize: '0.55rem',
+                                padding: '1px 4px',
+                                borderRadius: '3px',
                                 background: 
                                   token.launchpad === 'Gaspump' ? 'rgba(245, 158, 11, 0.12)' :
                                   token.launchpad === 'Blum Launch' ? 'rgba(16, 185, 129, 0.12)' :
@@ -1010,47 +929,50 @@ export default function Discover({ onSelectTokenForTrade }) {
                                   token.launchpad === 'sTONks' ? '#3b82f6' :
                                   token.launchpad === 'Uranus' ? '#ec4899' :
                                   token.launchpad?.includes('STON.fi') ? '#22d3ee' : '#f472b6',
-                                border: '1px solid currentColor'
+                                border: '1px solid currentColor',
+                                whiteSpace: 'nowrap'
                               }}
                             >
                               {token.launchpad}
                             </span>
                           </td>
 
-                          {/* Age & Radar */}
-                          <td style={{ fontSize: '0.68rem' }}>
+                          {/* Age & Stage */}
+                          <td style={{ fontSize: '0.65rem', padding: '6px 8px' }}>
                             <div style={{ display: 'flex', flexDirection: 'column' }}>
-                              <span style={{ color: '#ffffff', fontWeight: 500 }}>
+                              <span style={{ color: '#ffffff', fontWeight: 500, whiteSpace: 'nowrap' }}>
                                 {getRelativeTime(token.launchTime)}
                               </span>
-                              <span style={{ fontSize: '0.58rem', color: 'var(--accent-cyan)' }}>{token.lifecycle}</span>
+                              <span style={{ fontSize: '0.55rem', color: 'var(--accent-cyan)', whiteSpace: 'nowrap' }}>{token.lifecycle}</span>
                             </div>
                           </td>
 
                           {/* Price & 24h Change */}
-                          <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)' }}>
+                          <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', padding: '6px 8px' }}>
                             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                              <span style={{ color: token.change24h >= 0 ? 'var(--color-buy)' : 'var(--color-sell)', fontWeight: 600, fontSize: '0.75rem' }}>
+                              <span style={{ color: token.change24h >= 0 ? 'var(--color-buy)' : 'var(--color-sell)', fontWeight: 600, fontSize: '0.72rem', whiteSpace: 'nowrap' }}>
                                 ${token.price.toLocaleString(undefined, { minimumFractionDigits: token.price < 0.01 ? 6 : 4, maximumFractionDigits: token.price < 0.01 ? 6 : 4 })}
                               </span>
-                              <span style={{ fontSize: '0.58rem', color: token.change24h >= 0 ? 'var(--color-buy)' : 'var(--color-sell)' }}>
+                              <span style={{ fontSize: '0.55rem', color: token.change24h >= 0 ? 'var(--color-buy)' : 'var(--color-sell)' }}>
                                 {token.change24h >= 0 ? '+' : ''}{token.change24h}%
                               </span>
                             </div>
                           </td>
 
-                          {/* 24h Volume */}
-                          <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)' }}>
-                            ${(token.volume24h || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                          </td>
-
-                          {/* Market Cap */}
-                          <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', fontWeight: 600, color: '#ffffff' }}>
-                            ${token.mcap.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                          {/* Vol / MCAP */}
+                          <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', padding: '6px 8px' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                              <span style={{ color: '#ffffff', fontWeight: 600, fontSize: '0.68rem', whiteSpace: 'nowrap' }}>
+                                ${token.mcap.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                              </span>
+                              <span style={{ fontSize: '0.55rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                                Vol: ${(token.volume24h || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                              </span>
+                            </div>
                           </td>
 
                           {/* Holders */}
-                          <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', fontSize: '0.68rem' }}>
+                          <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', fontSize: '0.65rem', padding: '6px 8px' }}>
                             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
                               <span style={{ color: '#ffffff' }}>{token.holders}</span>
                               <span style={{ fontSize: '0.55rem', color: 'var(--accent-green)' }}>
@@ -1060,14 +982,14 @@ export default function Discover({ onSelectTokenForTrade }) {
                           </td>
 
                           {/* Bonding % */}
-                          <td>
+                          <td style={{ padding: '6px 8px' }}>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.6rem', fontFamily: 'var(--font-mono)' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.58rem', fontFamily: 'var(--font-mono)' }}>
                                 <span style={{ color: token.isDex ? 'var(--accent-green)' : 'var(--accent-cyan)', fontWeight: 600 }}>
-                                  {token.isDex ? '100% DEX' : `${token.bondingProgress.toFixed(1)}%`}
+                                  {token.isDex ? 'DEX' : `${token.bondingProgress.toFixed(0)}%`}
                                 </span>
                               </div>
-                              <div style={{ height: '4px', background: 'var(--bg-primary)', borderRadius: '2px', overflow: 'hidden' }}>
+                              <div style={{ height: '3px', background: 'var(--bg-primary)', borderRadius: '2px', overflow: 'hidden' }}>
                                 <div style={{
                                   width: `${token.bondingProgress}%`,
                                   height: '100%',
@@ -1079,40 +1001,31 @@ export default function Discover({ onSelectTokenForTrade }) {
                           </td>
 
                           {/* Rug Risk Score */}
-                          <td style={{ textAlign: 'center' }}>
+                          <td style={{ textAlign: 'center', padding: '6px 4px' }}>
                             <span style={{
-                              fontSize: '0.6rem',
-                              padding: '2px 6px',
-                              borderRadius: '4px',
+                              fontSize: '0.58rem',
+                              padding: '1px 5px',
+                              borderRadius: '3px',
                               fontWeight: 600,
                               background: (token.security?.rugScore || 15) > 50 ? 'rgba(239, 68, 68, 0.12)' : 'rgba(16, 185, 129, 0.12)',
                               color: (token.security?.rugScore || 15) > 50 ? 'var(--color-sell)' : 'var(--color-buy)',
-                              border: '1px solid currentColor'
+                              border: '1px solid currentColor',
+                              whiteSpace: 'nowrap'
                             }}>
-                              {(token.security?.rugScore || 15) > 50 ? `High (${token.security?.rugScore || 65})` : `Low (${token.security?.rugScore || 15})`}
+                              {(token.security?.rugScore || 15) > 50 ? `High` : `Low`}
                             </span>
                           </td>
 
                           {/* Quick Actions */}
-                          <td style={{ textAlign: 'center' }}>
-                            <div style={{ display: 'flex', gap: '4px', justifyContent: 'center' }}>
-                              <button
-                                type="button"
-                                onClick={(e) => { e.stopPropagation(); onSelectTokenForTrade(token.symbol); }}
-                                className="btn ape-in-btn"
-                                style={{ padding: '3px 8px', fontSize: '0.68rem', borderRadius: '4px', height: '24px' }}
-                              >
-                                <Zap size={11} fill="currentColor" /> APE IN
-                              </button>
-                              <button
-                                type="button"
-                                onClick={(e) => { e.stopPropagation(); setSelectedDetailsToken(token); }}
-                                className="btn btn-secondary"
-                                style={{ padding: '3px 6px', fontSize: '0.65rem', borderRadius: '4px', height: '24px' }}
-                              >
-                                Info
-                              </button>
-                            </div>
+                          <td style={{ textAlign: 'center', padding: '6px 6px' }}>
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); onSelectTokenForTrade(token.symbol); }}
+                              className="btn ape-in-btn"
+                              style={{ padding: '2px 8px', fontSize: '0.65rem', borderRadius: '4px', height: '22px', width: '100%' }}
+                            >
+                              <Zap size={10} fill="currentColor" /> APE IN
+                            </button>
                           </td>
                         </tr>
                       );

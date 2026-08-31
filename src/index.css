@@ -700,7 +700,7 @@ h1, h2, h3, h4, h5, h6 {
 /* Scanner High Density Table View */
 .scanner-table-wrapper {
   width: 100%;
-  overflow-x: auto;
+  overflow-x: hidden;
   background: var(--bg-secondary);
   border: 1px solid var(--border-color);
   border-radius: 8px;
@@ -709,10 +709,10 @@ h1, h2, h3, h4, h5, h6 {
 
 .scanner-table {
   width: 100%;
+  table-layout: auto;
   border-collapse: collapse;
   text-align: left;
-  font-size: 0.75rem;
-  white-space: nowrap;
+  font-size: 0.72rem;
 }
 
 .scanner-table th {
