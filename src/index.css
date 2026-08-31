@@ -79,9 +79,8 @@ body {
 .app-container {
   display: grid;
   grid-template-columns: var(--sidebar-width) 1fr;
-  grid-template-rows: var(--statsbar-height) var(--header-height) 1fr;
+  grid-template-rows: var(--header-height) 1fr;
   grid-template-areas:
-    "stats stats"
     "sidebar header"
     "sidebar content";
   height: 100vh;

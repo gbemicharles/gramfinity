@@ -463,7 +463,7 @@ export default function Discover({ onSelectTokenForTrade }) {
   }, [tokens]);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - var(--header-height) - var(--statsbar-height))', overflow: 'hidden', padding: '10px 14px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - var(--header-height))', overflow: 'hidden', padding: '10px 14px' }}>
       
       {/* TOP TRENDING SHOWCASE CARDS (TopBlast Reference Design) */}
       <div style={{ flexShrink: 0, marginBottom: '10px' }}>

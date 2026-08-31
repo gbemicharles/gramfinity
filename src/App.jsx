@@ -128,107 +128,7 @@ export default function App() {
     return (
       <div className={`app-container ${tmaMode ? 'tma-mode-layout' : ''}`}>
         
-        {/* 1. TOP STATS BAR (grid area: stats) */}
-        <div style={{
-          gridArea: 'stats',
-          background: '#04060a',
-          borderBottom: '1px solid var(--border-color)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '0 16px',
-          fontSize: '0.72rem',
-          fontFamily: 'var(--font-mono)',
-          color: 'var(--text-secondary)',
-          zIndex: 15
-        }}>
-          {/* Left Side: live network stats */}
-          <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
-            <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#00ff87', boxShadow: '0 0 8px #00ff87' }} />
-              TON Network: <span style={{ color: '#ffffff' }}>Optimal</span>
-            </span>
-            <span style={{ display: tmaMode ? 'none' : 'inline' }}>
-              Gas Fee: <span style={{ color: '#00ff87' }}>Low (0.005 TON)</span>
-            </span>
-            <span>
-              GRAM Price: <span style={{ color: 'var(--accent-cyan)' }}>${tonPrice.toFixed(2)}</span>
-            </span>
-          </div>
-
-          {/* Right Side: Sandbox/Mainnet, TMA Preview, API */}
-          <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
-            {/* Sandbox / Mainnet Mode Toggle */}
-            <div style={{ display: 'flex', background: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: '6px', padding: '2px', gap: '2px' }}>
-              <button
-                onClick={() => {
-                  setNetworkMode('sandbox');
-                  localStorage.setItem('gramfinity_network_mode', 'sandbox');
-                }}
-                style={{
-                  background: networkMode === 'sandbox' ? 'rgba(0, 229, 255, 0.12)' : 'transparent',
-                  border: 'none',
-                  color: networkMode === 'sandbox' ? 'var(--accent-cyan)' : 'var(--text-secondary)',
-                  fontSize: '0.65rem',
-                  padding: '2px 8px',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                  fontFamily: 'var(--font-mono)',
-                  fontWeight: networkMode === 'sandbox' ? 600 : 400,
-                  transition: 'all 0.2s'
-                }}
-              >
-                Sandbox
-              </button>
-              <button
-                onClick={() => {
-                  setNetworkMode('mainnet');
-                  localStorage.setItem('gramfinity_network_mode', 'mainnet');
-                }}
-                style={{
-                  background: networkMode === 'mainnet' ? 'rgba(0, 255, 135, 0.12)' : 'transparent',
-                  border: 'none',
-                  color: networkMode === 'mainnet' ? 'var(--accent-green)' : 'var(--text-secondary)',
-                  fontSize: '0.65rem',
-                  padding: '2px 8px',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                  fontFamily: 'var(--font-mono)',
-                  fontWeight: networkMode === 'mainnet' ? 600 : 400,
-                  transition: 'all 0.2s'
-                }}
-              >
-                Mainnet
-              </button>
-            </div>
-
-            <button
-              onClick={() => setTmaMode(prev => !prev)}
-              style={{
-                background: tmaMode ? 'rgba(0, 229, 255, 0.12)' : 'var(--bg-tertiary)',
-                border: `1px solid ${tmaMode ? 'var(--accent-cyan)' : 'var(--border-color)'}`,
-                color: tmaMode ? 'var(--accent-cyan)' : 'var(--text-secondary)',
-                fontSize: '0.65rem',
-                padding: '2px 8px',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                fontFamily: 'var(--font-mono)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-                transition: 'all 0.2s'
-              }}
-              className="hover:border-cyan"
-              title="Toggle Telegram Mini App Preview Mode"
-            >
-              <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: tmaMode ? 'var(--accent-cyan)' : 'var(--text-muted)' }} />
-              TMA View: {tmaMode ? 'ON' : 'OFF'}
-            </button>
-            <span style={{ display: tmaMode ? 'none' : 'inline' }}>Mode: <span style={{ color: networkMode === 'mainnet' ? 'var(--accent-green)' : 'var(--accent-cyan)' }}>{networkMode === 'mainnet' ? 'Live' : 'Sandbox'}</span></span>
-          </div>
-        </div>
-
-        {/* 2. SIDEBAR NAVIGATION (grid area: sidebar) */}
+        {/* 1. SIDEBAR NAVIGATION (grid area: sidebar) */}
         {!tmaMode && (
           <aside style={{
             gridArea: 'sidebar',
@@ -270,7 +170,7 @@ export default function App() {
                   }}
                   onClick={() => setActivePage('discover')}
                 >
-                  <Compass size={16} /> Discover Scanner
+                  <Compass size={16} /> Token Radar
                 </button>
 
                 <button
@@ -396,13 +296,13 @@ export default function App() {
           zIndex: 5
         }}>
           <div>
-            <h2 style={{ fontSize: tmaMode ? '0.85rem' : '1.1rem', textTransform: 'capitalize', color: '#ffffff' }}>
-              {activePage === 'terminal' ? 'Instant Trade Terminal' : 
-               activePage === 'discover' ? 'Token Discover & Safety Scanner' : 
-               activePage === 'whales' ? 'Whale Tracker & Copy Wallets' : 
-               activePage === 'intelligence' ? 'Forensic Smart Intelligence' : 
-               activePage === 'social' ? 'Social Sentiment Metrics' : 
-               activePage === 'alerts' ? 'Telegram Alert Configuration' : 'Gramfinity Wallet Portfolio'}
+            <h2 style={{ fontSize: tmaMode ? '0.85rem' : '1.1rem', textTransform: 'capitalize', color: '#ffffff', fontWeight: 800 }}>
+              {activePage === 'terminal' ? 'Trade Terminal' : 
+               activePage === 'discover' ? 'Token Radar' : 
+               activePage === 'whales' ? 'Whale Tracker' : 
+               activePage === 'intelligence' ? 'Smart Intelligence' : 
+               activePage === 'social' ? 'Social Sentiment' : 
+               activePage === 'alerts' ? 'Alert Center' : 'Portfolio'}
             </h2>
           </div>
 
