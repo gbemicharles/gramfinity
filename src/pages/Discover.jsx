@@ -446,8 +446,8 @@ export default function Discover({ onSelectTokenForTrade }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - var(--header-height))', overflow: 'hidden', padding: '10px 14px' }}>
       
-      {/* TOP TRENDING SHOWCASE CARDS (TopBlast Reference Design) */}
-      <div style={{ flexShrink: 0, marginBottom: '10px' }}>
+      {/* TOP TRENDING SHOWCASE CARDS (Desktop Only) */}
+      <div className="desktop-only-showcase" style={{ flexShrink: 0, marginBottom: '10px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px', fontSize: '0.7rem', fontFamily: 'var(--font-mono)', letterSpacing: '0.06em' }}>
           <span style={{ color: 'var(--text-muted)', fontWeight: 700 }}>TRENDING ON</span>
           <span style={{ color: '#00ff87', fontWeight: 900 }}>GRAMFINITY</span>

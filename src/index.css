@@ -482,6 +482,11 @@ h1, h2, h3, h4, h5, h6 {
     min-width: 680px !important;
   }
 
+  /* Hide Trending showcase cards on mobile screens so tokens appear at top */
+  .desktop-only-showcase, .trending-showcase-grid {
+    display: none !important;
+  }
+
   /* Modals full width on mobile */
   .modal-overlay > div {
     max-width: 95% !important;
