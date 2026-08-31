@@ -448,7 +448,7 @@ export default function Discover({ onSelectTokenForTrade }) {
     return list;
   }, [tokens, searchTerm, selectedCategory, timeframeFilter, mcapFilter, selectedLaunchpad, sortBy, verifiedOnly, activeTab, minMcap, maxMcap, minVolume, maxVolume, minLiquidity, maxLiquidity, minHolders, maxHolders, minRugScore, maxRugScore]);
 
-  // Aggregate scanner metrics
+  // Aggregate scanner metrics & Top 5 Trending Showcase tokens
   const statsSummary = useMemo(() => {
     const list = Object.keys(tokens).filter(s => s !== 'TON').map(s => tokens[s]);
     const totalVolume = list.reduce((sum, t) => sum + (t.volume24h || 0), 0);
@@ -457,14 +457,83 @@ export default function Discover({ onSelectTokenForTrade }) {
     return { totalVolume, totalLaunches, hotGainer };
   }, [tokens]);
 
+  const trendingShowcaseTokens = useMemo(() => {
+    const list = Object.keys(tokens).filter(s => s !== 'TON').map(s => tokens[s]);
+    return list.sort((a, b) => (b.volume24h || 0) - (a.volume24h || 0)).slice(0, 5);
+  }, [tokens]);
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - var(--header-height) - var(--statsbar-height))', overflow: 'hidden' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - var(--header-height) - var(--statsbar-height))', overflow: 'hidden', padding: '10px 14px' }}>
       
+      {/* TOP TRENDING SHOWCASE CARDS (TopBlast Reference Design) */}
+      <div style={{ flexShrink: 0, marginBottom: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px', fontSize: '0.7rem', fontFamily: 'var(--font-mono)', letterSpacing: '0.06em' }}>
+          <span style={{ color: 'var(--text-muted)', fontWeight: 700 }}>TRENDING ON</span>
+          <span style={{ color: '#00ff87', fontWeight: 900 }}>GRAMFINITY</span>
+        </div>
+
+        <div className="trending-showcase-grid">
+          {trendingShowcaseTokens.map(token => {
+            const isUp = (token.change24h || 0) >= 0;
+            const strokeColor = isUp ? '#00ff87' : '#ef4444';
+            const glowColor = isUp ? 'rgba(0, 255, 135, 0.4)' : 'rgba(239, 68, 68, 0.4)';
+            const seed = (token.symbol || '').split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+            
+            const y1 = isUp ? 110 : 20;
+            const y2 = isUp ? 50 + (seed % 20) : 90 - (seed % 20);
+            const y3 = isUp ? 80 - (seed % 15) : 40 + (seed % 15);
+            const y4 = isUp ? 15 : 125;
+            const chartPathD = `M 0 ${y1} Q 50 ${y2}, 100 ${y3} T 200 ${y4}`;
+
+            return (
+              <div 
+                key={token.symbol}
+                className="trending-card"
+                onClick={() => setSelectedDetailsToken(token)}
+              >
+                {/* Full Card Chart Wave Background */}
+                <svg className="trending-card-chart-bg" viewBox="0 0 200 140" preserveAspectRatio="none">
+                  <path
+                    d={chartPathD}
+                    fill="none"
+                    stroke={strokeColor}
+                    strokeWidth="3.2"
+                    style={{ filter: `drop-shadow(0 0 8px ${glowColor})` }}
+                  />
+                </svg>
+
+                {/* Card Content Overlay */}
+                <div className="trending-card-content">
+                  <div className="trending-card-mcap">
+                    {formatK(token.mcap)}
+                  </div>
+
+                  <div className="trending-card-footer">
+                    <div className="trending-card-avatar">
+                      <img
+                        src={getTokenImageUrl(token)}
+                        alt={token.symbol}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        onError={(e) => { e.target.style.display = 'none'; }}
+                      />
+                    </div>
+                    <div className="trending-card-meta">
+                      <span className="trending-card-ticker">${token.symbol}</span>
+                      <span className="trending-card-name">{token.name}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
       {/* SCANNER WORKSPACE */}
       <div className={`scanner-split-container ${feedCollapsed ? 'feed-collapsed' : ''}`}>
         
         {/* LEFT PANEL: Filters, Tabs, Table/Cards View */}
-        <div className="scanner-left-panel">
+        <div className="scanner-left-panel" style={{ padding: '0', borderRight: feedCollapsed ? 'none' : '1px solid rgba(255,255,255,0.06)' }}>
           
           {/* Single High-Density Consolidated Toolbar */}
           <div style={{
@@ -474,32 +543,32 @@ export default function Discover({ onSelectTokenForTrade }) {
             justifyContent: 'space-between',
             gap: '8px',
             marginBottom: '8px',
-            background: '#070a10',
+            background: '#060911',
             border: '1px solid rgba(255, 255, 255, 0.08)',
             padding: '6px 10px',
-            borderRadius: '8px',
+            borderRadius: '10px',
             flexShrink: 0
           }}>
             {/* Category Tabs */}
             <div style={{ display: 'flex', gap: '4px' }}>
               <button
                 onClick={() => setActiveTab('JUST_LAUNCHED')}
-                className={`tab-btn ${activeTab === 'JUST_LAUNCHED' ? 'active' : ''}`}
-                style={{ fontSize: '0.7rem', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: '4px' }}
+                className={`tab-btn ${activeTab === 'JUST_LAUNCHED' ? 'emerald-pill' : ''}`}
+                style={{ fontSize: '0.68rem', padding: '4px 10px', display: 'flex', alignItems: 'center', gap: '4px', borderRadius: '16px' }}
               >
                 <Rocket size={11} /> Just Launched
               </button>
               <button
                 onClick={() => setActiveTab('TRENDING')}
-                className={`tab-btn ${activeTab === 'TRENDING' ? 'active' : ''}`}
-                style={{ fontSize: '0.7rem', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: '4px' }}
+                className={`tab-btn ${activeTab === 'TRENDING' ? 'emerald-pill' : ''}`}
+                style={{ fontSize: '0.68rem', padding: '4px 10px', display: 'flex', alignItems: 'center', gap: '4px', borderRadius: '16px' }}
               >
                 <Flame size={11} /> Trending
               </button>
               <button
                 onClick={() => setActiveTab('BONDED')}
-                className={`tab-btn ${activeTab === 'BONDED' ? 'active' : ''}`}
-                style={{ fontSize: '0.7rem', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: '4px' }}
+                className={`tab-btn ${activeTab === 'BONDED' ? 'emerald-pill' : ''}`}
+                style={{ fontSize: '0.68rem', padding: '4px 10px', display: 'flex', alignItems: 'center', gap: '4px', borderRadius: '16px' }}
               >
                 <ShieldCheck size={11} /> Bonded
               </button>
