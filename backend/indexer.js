@@ -193,6 +193,15 @@ function startIndexer() {
   };
 }
 
+// Known fee/relay contract addresses that are NOT newly deployed tokens
+// (Blum sends to these on every transaction — they are treasury/fee addresses)
+const KNOWN_NON_TOKEN_ADDRESSES = new Set([
+  '0:d961b7ee4cfcee3e8b6818230a99d405e1ffcdfa4fc93f1486e3ea106162a582', // Blum fee address
+]);
+
+// Track recently processed addresses to avoid duplicates within 30s
+const recentlyProcessed = new Map();
+
 // Process transaction events from SSE stream
 async function processTransactionEvent(tx) {
   if (!tx || !tx.success) return;
@@ -202,17 +211,45 @@ async function processTransactionEvent(tx) {
   );
   if (!matched) return;
 
-  console.log(`🎯 Transaction on launchpad: [${matched.key}]`);
+  console.log(`🎯 Transaction on launchpad: [${matched.key}] | op: ${tx.in_msg?.op_code} | out_msgs: ${tx.out_msgs?.length}`);
 
-  if (tx.out_msgs && tx.out_msgs.length > 0) {
-    for (const outMsg of tx.out_msgs) {
-      if (outMsg.destination) {
-        const tokenAddress = Address.parse(outMsg.destination.address).toString();
-        console.log(`🚀 New launch on ${matched.key}: ${tokenAddress}`);
-        await parseAndInsertNewLaunch(matched.key, tokenAddress, tx.utime);
-      }
+  if (!tx.out_msgs || tx.out_msgs.length === 0) return;
+
+  // Filter valid destination addresses — skip empty strings and known fee addresses
+  const validDestinations = tx.out_msgs
+    .filter(msg => msg.destination?.address && msg.destination.address.trim() !== '')
+    .filter(msg => !KNOWN_NON_TOKEN_ADDRESSES.has(msg.destination.address))
+    .sort((a, b) => (b.value || 0) - (a.value || 0)); // Highest value = likely the deployed contract
+
+  if (validDestinations.length === 0) return;
+
+  // Take the highest-value destination as the newly deployed token contract
+  const deployedMsg = validDestinations[0];
+  let tokenAddress;
+  try {
+    tokenAddress = Address.parse(deployedMsg.destination.address).toString();
+  } catch (e) {
+    console.error(`❌ Could not parse address: ${deployedMsg.destination.address}`);
+    return;
+  }
+
+  // Deduplicate: skip if we processed this address in the last 60 seconds
+  const now = Date.now();
+  if (recentlyProcessed.has(tokenAddress)) {
+    const lastSeen = recentlyProcessed.get(tokenAddress);
+    if (now - lastSeen < 60000) {
+      console.log(`⏭️ Skipping duplicate: ${tokenAddress}`);
+      return;
     }
   }
+  recentlyProcessed.set(tokenAddress, now);
+  // Clean up old entries
+  for (const [addr, ts] of recentlyProcessed.entries()) {
+    if (now - ts > 120000) recentlyProcessed.delete(addr);
+  }
+
+  console.log(`🚀 New token deployed on ${matched.key}: ${tokenAddress}`);
+  await parseAndInsertNewLaunch(matched.key, tokenAddress, tx.utime);
 }
 
 // Parse real token metadata and insert to DB
