@@ -266,6 +266,14 @@ async function parseAndInsertNewLaunch(launchpadKey, tokenAddress, timestamp) {
     const supply = meta?.totalSupply || 0;
     const holders = meta?.holders || 0;
 
+    // Reject tokens with dummy/test metadata — skip saving to DB
+    const REJECTED_SYMBOLS = ['test', 'TEST', 'UNKNOWN', 'unknown', '', 'null', 'undefined'];
+    const REJECTED_NAMES = ['test', 'Test', 'Unknown Token', 'Unknown', ''];
+    if (REJECTED_SYMBOLS.includes(symbol) || REJECTED_NAMES.includes(name)) {
+      console.log(`⏭️ Skipping test/dummy token: symbol="${symbol}" name="${name}" at ${tokenAddress}`);
+      return;
+    }
+
     // Try to get bonding progress from contract
     let bondingProgress = 0;
     try {
