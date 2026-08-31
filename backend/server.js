@@ -120,7 +120,60 @@ app.use(express.json());
 
 // API: Health Check
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'healthy', database: pgPool ? 'postgres' : 'local-json', timestamp: new Date() });
+  res.json({
+    status: 'healthy',
+    database: pgPool ? 'postgres' : 'local-json',
+    version: '3458b04', // latest deployed commit
+    timestamp: new Date()
+  });
+});
+
+// API: Debug — exposes DB schema, table row counts and column info to verify everything is wired correctly
+app.get('/api/debug', async (req, res) => {
+  const info = { database: pgPool ? 'postgres' : 'local-json', tables: {}, env: {} };
+
+  // Check which env vars are present (don't expose values)
+  info.env = {
+    DATABASE_URL: !!process.env.DATABASE_URL,
+    TONAPI_KEY: !!process.env.TONAPI_KEY,
+    GASPUMP_FACTORY: process.env.GASPUMP_FACTORY || 'NOT SET',
+    BLUM_FACTORY: process.env.BLUM_FACTORY || 'NOT SET',
+    TOPBLAST_FACTORY: process.env.TOPBLAST_FACTORY || 'NOT SET',
+    PORT: process.env.PORT || 'NOT SET',
+  };
+
+  if (pgPool) {
+    try {
+      // Check tokens table columns
+      const cols = await pgPool.query(`
+        SELECT column_name, data_type FROM information_schema.columns
+        WHERE table_name = 'tokens' ORDER BY ordinal_position
+      `);
+      info.tables.tokens_columns = cols.rows.map(r => r.column_name);
+
+      // Row counts
+      const tc = await pgPool.query('SELECT COUNT(*) FROM tokens');
+      info.tables.tokens_count = parseInt(tc.rows[0].count);
+
+      const bc = await pgPool.query('SELECT COUNT(*) FROM bonded_tokens');
+      info.tables.bonded_tokens_count = parseInt(bc.rows[0].count);
+
+      // Try a test insert + rollback to verify write access
+      try {
+        await pgPool.query('BEGIN');
+        await pgPool.query(`INSERT INTO tokens (symbol, name, address, launchpad) VALUES ('__TEST__', 'Test', 'EQ_test_debug_addr', 'Debug') ON CONFLICT DO NOTHING`);
+        await pgPool.query('ROLLBACK');
+        info.tables.write_test = 'OK';
+      } catch (e) {
+        await pgPool.query('ROLLBACK').catch(() => {});
+        info.tables.write_test = 'FAILED: ' + e.message;
+      }
+    } catch (e) {
+      info.tables.error = e.message;
+    }
+  }
+
+  res.json(info);
 });
 
 // API: Get Deployed Tokens list (Discovery)
