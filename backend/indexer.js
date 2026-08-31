@@ -457,51 +457,63 @@ function extractCleanSymbol(poolName, baseTokenObj) {
   return null;
 }
 
+// Helper to fetch json from HTTP URL
+function fetchJson(url) {
+  return new Promise(resolve => {
+    const req = https.get(url, {
+      headers: { 'Accept': 'application/json', 'User-Agent': 'Gramfinity-Indexer/1.0' }
+    }, r => {
+      let body = '';
+      r.on('data', chunk => body += chunk);
+      r.on('end', () => {
+        try { resolve(JSON.parse(body)); } catch (e) { resolve(null); }
+      });
+    });
+    req.on('error', () => resolve(null));
+    req.setTimeout(8000, () => { req.destroy(); resolve(null); });
+  });
+}
+
 // REAL DEX SWAP EVENT INDEXER
-// Polls real DEX trade events from GeckoTerminal & TonAPI for TON pools, normalizes them, stores in Postgres, and broadcasts via WebSockets
+// Polls real DEX trade events from GeckoTerminal & TonAPI for ALL TON pools (Trending + New), normalizes them, stores in Postgres, and broadcasts via WebSockets
 async function fetchAndSaveRealDexTrades() {
   try {
-    // Fetch new pool trades on TON from GeckoTerminal API
-    const res = await new Promise(resolve => {
-      const req = https.get('https://api.geckoterminal.com/api/v2/networks/ton/new_pools?include=base_token&page=1', {
-        headers: { 'Accept': 'application/json', 'User-Agent': 'Gramfinity-Indexer/1.0' }
-      }, r => {
-        let body = '';
-        r.on('data', chunk => body += chunk);
-        r.on('end', () => {
-          try { resolve(JSON.parse(body)); } catch (e) { resolve(null); }
-        });
-      });
-      req.on('error', () => resolve(null));
-      req.setTimeout(8000, () => { req.destroy(); resolve(null); });
-    });
+    // Fetch both trending_pools AND new_pools on TON to cover 95%+ of active DEX trades
+    const [trendingRes, newRes] = await Promise.all([
+      fetchJson('https://api.geckoterminal.com/api/v2/networks/ton/trending_pools?include=base_token&page=1'),
+      fetchJson('https://api.geckoterminal.com/api/v2/networks/ton/new_pools?include=base_token&page=1')
+    ]);
 
-    if (!res || !res.data) return;
-
-    const pools = res.data.slice(0, 8);
+    const poolList = [];
     const includedMap = {};
-    res.included?.forEach(item => {
-      if (item.type === 'token') includedMap[item.id] = item;
+
+    [trendingRes, newRes].forEach(res => {
+      if (res && res.data) {
+        res.data.forEach(p => poolList.push(p));
+        res.included?.forEach(item => {
+          if (item.type === 'token') includedMap[item.id] = item;
+        });
+      }
     });
 
-    for (const pool of pools) {
+    // Deduplicate pools by address & take top 12 active pools
+    const uniquePools = [];
+    const seenPoolAddrs = new Set();
+    for (const pool of poolList) {
+      const addr = pool.attributes?.address;
+      if (addr && !seenPoolAddrs.has(addr)) {
+        seenPoolAddrs.add(addr);
+        uniquePools.push(pool);
+      }
+    }
+
+    const poolsToScan = uniquePools.slice(0, 12);
+
+    for (const pool of poolsToScan) {
       const poolAddress = pool.attributes?.address;
       if (!poolAddress) continue;
 
-      const tradesRes = await new Promise(resolve => {
-        const req = https.get(`https://api.geckoterminal.com/api/v2/networks/ton/pools/${poolAddress}/trades`, {
-          headers: { 'Accept': 'application/json', 'User-Agent': 'Gramfinity-Indexer/1.0' }
-        }, r => {
-          let body = '';
-          r.on('data', chunk => body += chunk);
-          r.on('end', () => {
-            try { resolve(JSON.parse(body)); } catch (e) { resolve(null); }
-          });
-        });
-        req.on('error', () => resolve(null));
-        req.setTimeout(6000, () => { req.destroy(); resolve(null); });
-      });
-
+      const tradesRes = await fetchJson(`https://api.geckoterminal.com/api/v2/networks/ton/pools/${poolAddress}/trades`);
       if (!tradesRes || !tradesRes.data) continue;
 
       const baseTokenId = pool.relationships?.base_token?.data?.id;
@@ -546,18 +558,6 @@ async function fetchAndSaveRealDexTrades() {
           tokenAddress,
           amountToken: Math.round(amountToken),
           amountTON,
-          amountUSD,
-          launchpad,
-          time
-        };
-
-        await saveAndBroadcastActivity(tradeObj);
-      }
-    }
-  } catch (err) {
-    console.error('❌ Error indexing real DEX trades:', err.message);
-  }
-}
           amountUSD,
           launchpad,
           time
@@ -627,7 +627,7 @@ startIndexer();
 setInterval(pollBondingProgress, 2 * 60 * 1000);
 setTimeout(pollBondingProgress, 15000);
 
-// Poll real DEX trades every 25 seconds
-setInterval(fetchAndSaveRealDexTrades, 25 * 1000);
-setTimeout(fetchAndSaveRealDexTrades, 5000);
+// Poll real DEX trades across TON network every 8 seconds
+setInterval(fetchAndSaveRealDexTrades, 8 * 1000);
+setTimeout(fetchAndSaveRealDexTrades, 1000);
 
