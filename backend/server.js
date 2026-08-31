@@ -75,18 +75,19 @@ if (process.env.DATABASE_URL) {
         );
       `);
       
-      // Create whales table with CamelCase fields matching frontend
+      // Create activities table for live TON blockchain DEX trades
       await pgPool.query(`
-        CREATE TABLE IF NOT EXISTS whales (
-          id SERIAL PRIMARY KEY,
-          address VARCHAR(100) UNIQUE NOT NULL,
-          name VARCHAR(100) NOT NULL,
-          "winRate" NUMERIC(5, 2) DEFAULT 0,
-          "roi30d" NUMERIC(10, 2) DEFAULT 0,
-          "pnl30d" NUMERIC(15, 2) DEFAULT 0,
-          "trades30d" INT DEFAULT 0,
-          tag VARCHAR(100) DEFAULT '',
-          "avgEntryTime" VARCHAR(50) DEFAULT ''
+        CREATE TABLE IF NOT EXISTS activities (
+          id VARCHAR(200) PRIMARY KEY,
+          buyer VARCHAR(100) NOT NULL,
+          type VARCHAR(20) NOT NULL,
+          token VARCHAR(50) NOT NULL,
+          token_address VARCHAR(100) NOT NULL,
+          amount_token NUMERIC(30, 8) DEFAULT 0,
+          amount_ton NUMERIC(30, 8) DEFAULT 0,
+          amount_usd NUMERIC(30, 2) DEFAULT 0,
+          launchpad VARCHAR(100) DEFAULT '',
+          time TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
         );
       `);
       
@@ -237,6 +238,42 @@ app.get('/api/bonded', async (req, res) => {
     }
   } catch (error) {
     console.error('❌ Failed to query bonded_tokens:', error.message);
+    res.status(500).json({ error: 'Database query failed' });
+  }
+});
+
+// API: Get Real Live Blockchain Activity Feed Events
+app.get('/api/activities', async (req, res) => {
+  try {
+    if (pgPool) {
+      const result = await pgPool.query(`
+        SELECT
+          id, buyer, type, token,
+          token_address AS "tokenAddress",
+          COALESCE(amount_token, 0) AS "amountToken",
+          COALESCE(amount_ton, 0) AS "amountTON",
+          COALESCE(amount_usd, 0) AS "amountUSD",
+          launchpad,
+          EXTRACT(EPOCH FROM time) * 1000 AS time
+        FROM activities
+        ORDER BY time DESC
+        LIMIT 50
+      `);
+      const formattedRows = result.rows.map(row => ({
+        ...row,
+        amountToken: parseFloat(row.amountToken || 0),
+        amountTON: parseFloat(row.amountTON || 0),
+        amountUSD: parseFloat(row.amountUSD || 0),
+        time: parseFloat(row.time || Date.now())
+      }));
+      res.json(formattedRows);
+    } else {
+      if (!fs.existsSync(dbFallbackPath)) return res.json([]);
+      const data = JSON.parse(fs.readFileSync(dbFallbackPath, 'utf8'));
+      res.json(data.activities || []);
+    }
+  } catch (error) {
+    console.error("❌ Failed to query activities:", error.message);
     res.status(500).json({ error: 'Database query failed' });
   }
 });

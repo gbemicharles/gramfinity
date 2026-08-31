@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { io } from 'socket.io-client';
 import { mockEngine } from '../utils/mockEngine';
 import { 
   Search, Flame, Rocket, Activity, ShieldCheck, TrendingUp, Cpu, 
@@ -34,9 +35,7 @@ export default function Discover({ onSelectTokenForTrade }) {
   const getSmartMoneyActivityForToken = (symbol) => {
     const entries = mockEngine.tokenSmartMoneyEntries[symbol] || [];
     if (entries.length === 0) {
-      return [
-        { wallet: '@Meme_King_99', amount: '150 GRAM', entry: '$15K MC', roi: '+88%', score: 82 }
-      ];
+      return [];
     }
     return entries.map(addr => {
       const whale = mockEngine.whales.find(w => w.address === addr) || {
@@ -47,8 +46,8 @@ export default function Discover({ onSelectTokenForTrade }) {
       const username = whale.name.includes('@') ? whale.name : `@${whale.name.replace(/\s+/g, '_')}`;
       return {
         wallet: username,
-        amount: Math.floor(Math.random() * 600 + 150) + ' GRAM',
-        entry: '$' + Math.floor(Math.random() * 30 + 15) + 'K MC',
+        amount: '150 TON',
+        entry: '$15K MC',
         roi: '+' + Math.floor(whale.roi30d) + '%',
         score: Math.floor(whale.winRate)
       };
@@ -77,45 +76,55 @@ export default function Discover({ onSelectTokenForTrade }) {
     tokensRef.current = tokens;
   }, [tokens]);
 
-  // Initial simulated micro-trades for feed
+  // Real TON Blockchain Live Activity Feed Integration (WebSocket + REST)
   useEffect(() => {
-    const initialTrades = [];
-    const buyers = ['Anon', 'Degen', 'Whale', 'Arbitrageur', 'EQB4...119b', 'EQD3...41aa', 'EQC8...d772', 'EQF2...0a91'];
-    const initialSymbols = ['TONY', 'DOGS', 'REDO', 'HMSTR', 'NOT', 'GRAM'];
-    const now = Date.now();
-    
-    for (let i = 0; i < 15; i++) {
-      const buyer = buyers[Math.floor(Math.random() * buyers.length)];
-      const tokenSymbol = initialSymbols[Math.floor(Math.random() * initialSymbols.length)];
-      const type = Math.random() > 0.35 ? 'BUY' : 'SELL';
-      const price = tokenSymbol === 'TONY' ? 0.000045 :
-                    tokenSymbol === 'DOGS' ? 0.00085 :
-                    tokenSymbol === 'REDO' ? 0.854 :
-                    tokenSymbol === 'HMSTR' ? 0.0035 :
-                    tokenSymbol === 'NOT' ? 0.0125 : 0.0092;
-      
-      let amountToken;
-      if (price > 0.5) {
-        amountToken = Math.round(Math.random() * 2000 + 50);
-      } else if (price > 0.01) {
-        amountToken = Math.round(Math.random() * 80000 + 1000);
-      } else {
-        amountToken = Math.round(Math.random() * 5000000 + 50000);
+    // 1. Fetch initial real trade activity history from backend API
+    const fetchActivities = async () => {
+      try {
+        const apiBase = window.location.hostname === 'localhost' ? 'http://localhost:4000' : '';
+        const res = await fetch(`${apiBase}/api/activities`);
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data)) {
+            setTradesLog(data);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch real activity feed:', err);
       }
-      
-      const amountTON = parseFloat(((amountToken * price) / 7.24).toFixed(2));
-      initialTrades.push({
-        id: `trade_init_${i}`,
-        buyer,
-        type,
-        token: tokenSymbol,
-        amountToken,
-        amountTON,
-        time: now - i * 15000
+    };
+
+    fetchActivities();
+
+    // 2. Connect to Socket.IO WebSocket broadcast server for real-time events
+    let socket;
+    try {
+      const socketUrl = window.location.hostname === 'localhost' ? 'http://localhost:4000' : window.location.origin;
+      socket = io(socketUrl, {
+        reconnection: true,
+        reconnectionDelay: 1000,
+        reconnectionAttempts: Infinity
       });
+
+      socket.on('new_activity', (newTrade) => {
+        if (!newTrade || !newTrade.id) return;
+        setTradesLog(prev => {
+          // Deduplicate by trade ID
+          if (prev.some(item => item.id === newTrade.id)) return prev;
+          return [newTrade, ...prev].slice(0, 50);
+        });
+      });
+    } catch (err) {
+      console.error('WebSocket connection error:', err);
     }
-    
-    setTradesLog(initialTrades);
+
+    // 3. Fallback poller to fetch activities every 15 seconds if WebSocket drops
+    const pollInterval = setInterval(fetchActivities, 15000);
+
+    return () => {
+      clearInterval(pollInterval);
+      if (socket) socket.disconnect();
+    };
   }, []);
 
   // Listen to mock prices & track border flashes
@@ -168,49 +177,6 @@ export default function Discover({ onSelectTokenForTrade }) {
         setFlashStates(nextFlashes);
       }
     }, 200);
-    
-    return () => clearInterval(interval);
-  }, []);
-
-  // Simulated live micro-trade ticker interval
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const activeTokens = tokensRef.current;
-      const symbols = Object.keys(activeTokens).filter(s => s !== 'TON');
-      if (symbols.length === 0) return;
-      
-      const buyers = ['Anon', 'Degen', 'Whale', 'Arbitrageur', 'EQA7...d91c', 'EQD4...a82f', 'EQB2...88cc', 'EQC5...f220', 'EQF4...9091'];
-      const buyer = buyers[Math.floor(Math.random() * buyers.length)];
-      const tokenSymbol = symbols[Math.floor(Math.random() * symbols.length)];
-      const token = activeTokens[tokenSymbol];
-      if (!token) return;
-      
-      const type = Math.random() > 0.3 ? 'BUY' : 'SELL';
-      
-      let amountToken;
-      if (token.price > 0.5) {
-        amountToken = Math.round(Math.random() * 4000 + 50);
-      } else if (token.price > 0.01) {
-        amountToken = Math.round(Math.random() * 120000 + 2000);
-      } else {
-        amountToken = Math.round(Math.random() * 6000000 + 40000);
-      }
-      
-      const tonPrice = activeTokens.TON?.price || 7.24;
-      const amountTON = parseFloat(((amountToken * token.price) / tonPrice).toFixed(2));
-      
-      const newTrade = {
-        id: 'trade_' + Date.now() + Math.random(),
-        buyer,
-        type,
-        token: tokenSymbol,
-        amountToken,
-        amountTON,
-        time: Date.now()
-      };
-      
-      setTradesLog(prev => [newTrade, ...prev].slice(0, 30));
-    }, 2200);
     
     return () => clearInterval(interval);
   }, []);
@@ -1231,7 +1197,7 @@ export default function Discover({ onSelectTokenForTrade }) {
           <div style={{ flex: 1, overflowY: 'auto', paddingRight: '2px' }}>
             {tradesLog.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-muted)', fontSize: '0.72rem' }}>
-                Connecting to GRAM price feed pipeline...
+                Scanning TON Blockchain DEX transactions...
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -1253,7 +1219,7 @@ export default function Discover({ onSelectTokenForTrade }) {
                     }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontWeight: 600, color: '#f8fafc' }}>
+                      <span style={{ fontWeight: 600, color: '#f8fafc', fontFamily: 'var(--font-mono)' }}>
                         {trade.buyer}
                       </span>
                       <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>
@@ -1271,12 +1237,17 @@ export default function Discover({ onSelectTokenForTrade }) {
                         {trade.type === 'BUY' ? 'BUY' : 'SELL'}
                       </span>
                       <span style={{ color: '#cbd5e1', fontWeight: 500 }}>
-                        {trade.amountToken.toLocaleString()} ${trade.token}
+                        {Number(trade.amountToken || 0).toLocaleString()} ${trade.token}
                       </span>
                       <span style={{ color: 'var(--text-muted)', fontSize: '0.65rem' }}>for</span>
                       <span style={{ color: 'var(--accent-cyan)', fontWeight: 600, fontFamily: 'var(--font-mono)' }}>
-                        {trade.amountTON.toFixed(2)} GRAM
+                        {Number(trade.amountTON || 0).toFixed(2)} TON
                       </span>
+                      {trade.amountUSD > 0 && (
+                        <span style={{ color: 'var(--text-muted)', fontSize: '0.6rem', marginLeft: 'auto' }}>
+                          ~${Number(trade.amountUSD).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                      )}
                     </div>
                   </div>
                 ))}
